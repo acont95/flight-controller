@@ -1,56 +1,96 @@
-// #include <Arduino.h>
 #include <mbed.h>
 #include <cstdint>
-// #include <SPI.h>
-#include "icm20948_imu.h"
+#include <icm20948_imu.h>
+#include <message_protocol.h>
+#include "flight_controller.h";
+#include "imu_manager.h"
 
-static const PinName SPI_CS = p5;
+/************** SPI PIN DEFINE **************/
+static const PinName IMU_SPI_CS = p5;
+static const PinName GPS_SPI_CS = p6;
+static const PinName BAROMETER_SPI_CS = p7;
+
 static const PinName SPI_CLK = p2;
 static const PinName SPI_TX = p3;
 static const PinName SPI_RX = p4;
+
 static const PinName IMU_INT_PIN = p10;
+
+/************** SERIAL PIN DEFINE **************/
+static const PinName SERIAL_TX = p14;
+static const PinName SERIAL_RX = p15;
+uint8_t serial_buf[32] = {0};
+
+static const mbed::PwmOut motor1(p15);
+static const mbed::PwmOut motor2(p16);
+static const mbed::PwmOut motor3(p17);
+static const mbed::PwmOut motor4(p18);
+static mbed::Timer t;
+
+static mbed::DigitalOut cs(IMU_SPI_CS);
+static mbed::BufferedSerial serial_port(SERIAL_TX, SERIAL_RX);
 
 static const xyzOffset accelOffset = {.x=0, .y=0, .z=0};
 static const xyzOffset gyroOffset = {.x=0, .y=0, .z=0};
 
-mbed::InterruptIn ICM20948_INT(p10);
+mbed::InterruptIn imu_int(p10);
 events::EventQueue event_queue(32 * EVENTS_EVENT_SIZE);
-// Thread event_queue_thread;
-// MbedSPI SPI_BUS_1(SPI_CLK, SPI_TX, SPI_RX);
+rtos::Thread event_queue_thread;
+rtos::Thread peripheral_computer_thread;
 mbed::SPI SPI_BUS_1(SPI_CLK, SPI_TX, SPI_RX);
-// MbedSPI SPI_BUS_2(SPI_CLK, SPI_TX, SPI_RX);
-ICM20948_IMU imu(& SPI_BUS_1, SPI_CS, accelOffset, gyroOffset);
+ICM20948_IMU imu(SPI_BUS_1, cs, accelOffset, gyroOffset);
+FlightController fc = FlightController(GpsCoord{.latitude = 0, .longitude= 0});
+ImuManager imu_manager(imu);
 
 void setup(void)
 {
+    event_queue_thread.set_priority(osPriorityRealtime);
+    peripheral_computer_thread.set_priority(osPriorityNormal);
 
-    pinMode(SPI_CS, OUTPUT);
-    digitalWrite(SPI_CS, HIGH);
-    SPI_BUS_1.begin();
+    pinMode(IMU_SPI_CS, OUTPUT);
+    cs = 1;
+    serial_port.set_baud(9600);
+    serial_port.set_format(
+        /* bits */ 8,
+        /* parity */ mbed::BufferedSerial::None,
+        /* stop bit */ 1
+    );
 
-    imu.setUserCtrl(DMP_DISABLED, FIFO_ENABLED, I2C_DISABLED, SPI_MODE, DMP_RST_DO_NOTHING, SRAM_RST_DO_NOTHING, I2C_RST_DO_NOTHING);
-    imu.setPwrMgmt1(DEVICE_RESET_DO_NOTHING, SLEEP_MODE_DISABLED, LOW_POWER_MODE_DISABLED, TEMP_SENSOR_DISABLED, AUTO_CLK);
-    imu.setPwrMgmt2(GYRO_ENABLE, ACCEL_ENABLE);
-    imu.setIntPinCfg(INT1_LOGIC_HIGH, INT1_PUSH_PULL, INT1_HELD_UNTIL_CLEARED, INT_STATUS_READ_CLEAR, FSYNC_ACTIVE_HIGH, FSYNC_INT_DISABLE, I2C_MASTER_BYPASS_MODE_DISABLE);
-    imu.setIntEnable(DISABLE_WAKE_FSYNC, DISABLE_WAKE_MOTION, DISABLE_PLL_RDY_INT, DISABLE_DMP_INT, DISABLE_I2C_MASTER_INT);
-    imu.setIntEnable1(ENABLE_RAW_DATA_INT);
-    imu.setFifoEn2(ENABLE_ACCEL_FIFO, ENABLE_GYRO_Z_FIFO, ENABLE_GYRO_Y_FIFO, ENABLE_GYRO_X_FIFO, DISABLE_TEMP_FIFO);
-    imu.setFifoMode(FIFO_STREAM);
-    imu.setGyroSmplrtDiv(0);
-    imu.setGyroConfig1(GYRO_DLPF_0, GYRO_RANGE_1000, GYRO_ENABLE_DLPF);
-    imu.setOdrAlignEn(ENABLE_ODR_START_TIME_ALIGNMENT);
-    imu.setAccelSmplrtDiv(0);
-    imu.setAccelConfig(ACCEL_DLPFCFG_0, ACCEL_FULL_SCALE_16G, ACCEL_ENABLE_DLPF);
-
-    ICM20948_INT.rise();
+    // ICM20948_INT.rise();
 }
 
-void loop(void)
-{
-    // SPI_BUS_1.beginTransaction(imu.getSpiSettings());
+void serialComThread() {
+    uint32_t num;
+    MessageProtocol prot = MessageProtocol();
+    while (true) {
+        num = serial_port.read(serial_buf, sizeof(serial_buf));
+        if (num) {
+            // if (prot.decodeData(serial_buf, sizeof(serial_buf))) {
+
+            // }
+        }
+    }
+}
+
+void imuSensorIsr() {
+    t.stop();
+    imu_manager.setDt(t.elapsed_time().count());
+    t.reset();
+    t.start();
+    event_queue.call(flightControllerUpdate);
+}
+
+void flightControllerUpdate() {
+    // imu.
+    // fc.updateYawPitchRoll(0,0,0);
+    // fc.updateMotorOutputs();
 }
 
 int main() {
-    init();
+    peripheral_computer_thread.start(serialComThread);
+    event_queue_thread.start(mbed::callback(&event_queue, &events::EventQueue::dispatch_forever));
+    imu_int.rise(imuSensorIsr);
+    mktime
+    // init();>?
     setup();
 }
