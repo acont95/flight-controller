@@ -1,7 +1,7 @@
 #include "icm20948_imu.h"
 
 // Constructors
-ICM20948_IMU::ICM20948_IMU(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin, xyzOffset accel_offset, xyzOffset gyro_offset) : spi_bus(spi_bus), cs_pin(cs_pin), accel_offset(accel_offset), gyro_offset(gyro_offset) {
+ICM20948_IMU::ICM20948_IMU(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin, xyz16Int accel_offset, xyz16Int gyro_offset) : spi_bus(spi_bus), cs_pin(cs_pin), accel_offset(accel_offset), gyro_offset(gyro_offset) {
     currentBank = 0;
     spi_bus.format(8, 3);
     spi_bus.frequency(9000000);
@@ -12,7 +12,7 @@ ICM20948_IMU::ICM20948_IMU(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin, xyzOffs
 // Public methods
 
 void ICM20948_IMU::setGyroConfig1(GYRO_DLPFCFG gyroDlpf, GYRO_FS_SEL gyroRange, GYRO_FCHOICE gyro_fchoice) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (gyroDlpf << 3);
     val |= (gyroRange << 1);
     val |= gyro_fchoice;
@@ -28,7 +28,7 @@ void ICM20948_IMU::setUserCtrl(
     SRAM_RST sram_rst, 
     I2C_MST_RST i2c_mst_rst
 ) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (dmp_en << 7);
     val |= (fifo_en << 6);
     val |= (i2c_mst_en << 5);
@@ -40,7 +40,7 @@ void ICM20948_IMU::setUserCtrl(
  }
 
 void ICM20948_IMU::setLpConfig(I2C_MST_CYCLE i2c_mst_cycle, ACCEL_CYCLE accel_cycle, GYRO_CYCLE gyro_cycle) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (i2c_mst_cycle << 6);
     val |= (accel_cycle << 5);
     val |= (gyro_cycle << 4);
@@ -48,7 +48,7 @@ void ICM20948_IMU::setLpConfig(I2C_MST_CYCLE i2c_mst_cycle, ACCEL_CYCLE accel_cy
 }
 
 void ICM20948_IMU::setPwrMgmt1(DEVICE_RESET device_reset, SLEEP sleep, LP_EN lp_en, TEMP_DIS temp_dis, CLKSEL clk_sel) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (device_reset << 7);
     val |= (sleep << 6);
     val |= (lp_en << 5);
@@ -58,7 +58,7 @@ void ICM20948_IMU::setPwrMgmt1(DEVICE_RESET device_reset, SLEEP sleep, LP_EN lp_
 }
 
 void ICM20948_IMU::setPwrMgmt2(GYRO_STATUS gyro_status, ACCEL_STATUS accel_status) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (gyro_status << 3);
     val |= accel_status;
     writeRegister8(0, ICM20948_PWR_MGMT_2, val);
@@ -73,7 +73,7 @@ void ICM20948_IMU::setIntPinCfg(
     FSYNC_INT_MODE_EN fsync_int_mode_en,
     BYPASS_EN bypass_en
 ) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (int1_actl << 7);
     val |= (int1_open << 6);
     val |= (int1_latch_en << 5);
@@ -92,7 +92,7 @@ void ICM20948_IMU::setIntEnable(
     DMP_INT1_EN dmp_int1_en, 
     I2C_MST_INT_EN i2c_mst_int_en
 ) {
-    uint8_t val;
+    uint8_t val = 0;
 
     val |= (reg_wof_en << 7);
     val |= (wom_int_en << 3);
@@ -182,7 +182,7 @@ void ICM20948_IMU::setFifoEn1(
     SLV_1_FIFO_EN slv_1_fifo_en, 
     SLV_0_FIFO_EN slv_0_fifo_en
 ) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (slv_3_fifo_en << 3);
     val |= (slv_2_fifo_en << 2);
     val |= (slv_1_fifo_en << 1);
@@ -199,7 +199,7 @@ void ICM20948_IMU::setFifoEn2(
     GYRO_X_FIFO_EN gyro_x_fifo_en,
     TEMP_FIFO_EN temp_fifo_en
 ) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (accel_fifo_en << 4);
     val |= (gyro_z_fifo_en << 3);
     val |= (gyro_y_fifo_en << 2);
@@ -230,19 +230,6 @@ DATA_RDY_STATUS ICM20948_IMU::dataRdyStatus() {
     result.WOF_STATUS = (val >> 7) & 1;
     result.RAW_DATA_RDY = val & 1;
 
-    return result;
-}
-
-xyzOffset ICM20948_IMU::accelOffsetOut() {
-    readRegister48(1, ICM20948_XA_OFFS_H);
-    int16_t rawX = highLowByteTo16(buf[0], buf[1]);
-    int16_t rawY = highLowByteTo16(buf[2], buf[3]);
-    int16_t rawZ = highLowByteTo16(buf[4], buf[5]);
-
-    xyzOffset result;
-    result.x = rawX;
-    result.y = rawY;
-    result.z = rawZ;
     return result;
 }
 
@@ -287,7 +274,7 @@ accelGyroData ICM20948_IMU::readFifo() {
 
 
 void ICM20948_IMU::setAccelOffsets() {
-    xyzOffset factoryAccelOffsets = accelOffsetOut();
+    xyz16Int factoryAccelOffsets = accelOffsetOut();
     uint8_t mask[3] = {0,0,0};
 
     if (factoryAccelOffsets.x & 0x1) {
@@ -315,8 +302,8 @@ void ICM20948_IMU::setAccelOffsets() {
     readRegister48(1, ICM20948_XA_OFFS_H);
 }
 
-xyzOffset ICM20948_IMU::accelOffsetOut() {
-    xyzOffset result;
+xyz16Int ICM20948_IMU::accelOffsetOut() {
+    xyz16Int result;
     readRegister48(1, ICM20948_XA_OFFS_H);
     result.x = highLowByteTo16(buf[0], buf[1]);
     result.y = highLowByteTo16(buf[2], buf[3]);
@@ -335,7 +322,7 @@ void ICM20948_IMU::setGyroSmplrtDiv(uint8_t smplrt) {
 }
 
 void ICM20948_IMU::setGyroConfig2(XGYRO_CTEN x_gyro_cten, YGYRO_CTEN y_gyro_cten, ZGYRO_CTEN z_gyro_cten, GYRO_AVGCFG gyro_avgcf) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (x_gyro_cten << 5);
     val |= (y_gyro_cten << 4);
     val |= (z_gyro_cten << 3);
@@ -364,7 +351,7 @@ void ICM20948_IMU::setAccelSmplrtDiv(uint16_t smplrt) {
 }
 
 void ICM20948_IMU::setAccelIntelCtrl(ACCEL_INTEL_EN accel_intel_en, ACCEL_INTEL_MODE_INT accel_intel_mode_int) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (accel_intel_en << 1);
     val |= accel_intel_mode_int;
 
@@ -376,7 +363,7 @@ void ICM20948_IMU::setAccelWomThr(uint8_t wom_thr) {
 }
 
 void ICM20948_IMU::setAccelConfig(ACCEL_DLPFCFG accel_dlpfcfg, ACCEL_FS_SEL accel_fs_sel, ACCEL_FCHOICE accel_fchoice) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (accel_dlpfcfg << 3);
     val |= (accel_fs_sel << 1);
     val |= (accel_fchoice);
@@ -385,7 +372,7 @@ void ICM20948_IMU::setAccelConfig(ACCEL_DLPFCFG accel_dlpfcfg, ACCEL_FS_SEL acce
 }
 
 void ICM20948_IMU::accelConfig2(AX_ST_EN_REG ax_st_en_reg, AY_ST_EN_REG ay_st_en_reg, AZ_ST_EN_REG az_st_en_reg, DEC3_CFG dec3_cfg) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (ax_st_en_reg << 4);
     val |= (ay_st_en_reg << 3);
     val |= (az_st_en_reg << 2);
@@ -395,7 +382,7 @@ void ICM20948_IMU::accelConfig2(AX_ST_EN_REG ax_st_en_reg, AY_ST_EN_REG ay_st_en
 }
 
 void ICM20948_IMU::fsyncConfig(DELAY_TIME_EN delay_time_en, WOF_DEGLITCH_EN wof_deglitch_en, WOF_EDGE_INT wof_edge_int, EXT_SYNC_SET ext_sync_set) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= (delay_time_en << 7);
     val |= (wof_deglitch_en << 5);
     val |= (wof_edge_int << 4);
@@ -405,14 +392,14 @@ void ICM20948_IMU::fsyncConfig(DELAY_TIME_EN delay_time_en, WOF_DEGLITCH_EN wof_
 }
 
 void ICM20948_IMU::tempConfig(TEMP_DLPFCFG temp_dlpfcfg) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= temp_dlpfcfg;
 
     writeRegister8(2, ICM20948_TEMP_CONFIG, val);
 }
 
 void ICM20948_IMU::modCtrlUsr(REG_LP_DMP_EN reg_lp_dmp_en) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= reg_lp_dmp_en;
 
     writeRegister8(2, ICM20948_MOD_CTRL_USR, val);
@@ -427,8 +414,9 @@ AK09916_STATUS1 ICM20948_IMU::ak09916Status1() {
     return result;
 }
 
-ak08816Xyz ICM20948_IMU::ak09916MeasurementData() {
-    ak08816Xyz result;
+xyz16Int ICM20948_IMU::ak09916MeasurementData() {
+    xyz16Int result;
+
     readRegister48(0, AK09916_HXL);
     result.x = highLowByteTo16(buf[1], buf[0]);
     result.y = highLowByteTo16(buf[3], buf[2]);
@@ -447,14 +435,14 @@ AK09916_STATUS2 ICM20948_IMU::ak09916Status2() {
 }
 
 void ICM20948_IMU::ak09916Control2(AK09916_MODE mode) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= mode;
 
     writeRegister8(0, AK09916_CNTL2, val);
 }
 
 void ICM20948_IMU::ak09916Control3(AK09916_SRST srst) {
-    uint8_t val;
+    uint8_t val = 0;
     val |= srst;
 
     writeRegister8(0, AK09916_CNTL3, val);
@@ -498,7 +486,7 @@ uint8_t ICM20948_IMU::readRegister8(uint8_t bank, uint8_t reg) {
 }
 
 int16_t ICM20948_IMU::readRegister16(uint8_t bank, uint8_t reg) {
-    uint8_t result;
+    int16_t result;
     switchBank(bank);
     cs_pin = 0;
     spi_bus.write(reg);
@@ -506,7 +494,7 @@ int16_t ICM20948_IMU::readRegister16(uint8_t bank, uint8_t reg) {
     uint8_t lsb = spi_bus.write(0x00);
     cs_pin = 1;
 
-    int16_t result = (msb << 8) | lsb;
+    result = (msb << 8) | lsb;
 
     return result;
 }
@@ -535,3 +523,6 @@ void ICM20948_IMU::switchBank(uint8_t bank) {
 int16_t ICM20948_IMU::highLowByteTo16(uint8_t highByte, uint8_t lowByte) {
     return (int16_t) ((highByte << 8) | lowByte);
 }
+
+const float ICM20948_IMU::TEMP_SENSITIVITY = 333.87f;
+const float ICM20948_IMU::TEMP_OFFSET = 0.0f;

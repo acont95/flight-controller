@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 #include <mbed.h>
 
@@ -94,7 +96,7 @@
 #define ICM20948_ZG_OFFS_USRL 0x08
 #define ICM20948_ODR_ALIGN_EN 0x09
 #define ICM20948_ACCEL_SMPLRT_DIV_1 0x10
-#define ICM20948_ACCEL_SMPLRT_DIV_1 0x11
+#define ICM20948_ACCEL_SMPLRT_DIV_2 0x11
 #define ICM20948_ACCEL_INTEL_CTRL 0x12
 #define ICM20948_ACCEL_WOM_THR 0x13
 #define ICM20948_ACCEL_CONFIG 0x14
@@ -144,14 +146,14 @@
 
 /************** GYRO_CONFIG_1 **************/
 
-typedef enum GYRO_FS_SEL {
+enum GYRO_FS_SEL {
     GYRO_RANGE_250,
     GYRO_RANGE_500,
     GYRO_RANGE_1000,
     GYRO_RANGE_2000
-} GYRO_FS_SEL;
+};
 
-typedef enum GYRO_DLPFCFG {
+enum GYRO_DLPFCFG {
     GYRO_DLPF_0, 
     GYRO_DLPF_1, 
     GYRO_DLPF_2, 
@@ -160,21 +162,21 @@ typedef enum GYRO_DLPFCFG {
     GYRO_DLPF_5, 
     GYRO_DLPF_6, 
     GYRO_DLPF_7
-} GYRO_DLPFCFG;
+};
 
-typedef enum GYRO_FCHOICE {
+enum GYRO_FCHOICE {
     GYRO_BYPASS_DLPF,
     GYRO_ENABLE_DLPF
-} GYRO_FCHOICE;
+};
 
-typedef enum ICM20948_ACCEL_RANGE {
+enum ICM20948_ACCEL_RANGE {
     ICM20948_ACCEL_RANGE_2G,
     ICM20948_ACCEL_RANGE_4G,
     ICM20948_ACCEL_RANGE_8G,
     ICM20948_ACCEL_RANGE_16G
-} ICM20948_ACCEL_RANGE;
+};
 
-typedef enum ICM20948_LOW_POW_GYRO_AVG {
+enum ICM20948_LOW_POW_GYRO_AVG {
     ICM20948_LOW_POW_GYRO_AVG_1,
     ICM20948_LOW_POW_GYRO_AVG_2,
     ICM20948_LOW_POW_GYRO_AVG_4,
@@ -183,262 +185,262 @@ typedef enum ICM20948_LOW_POW_GYRO_AVG {
     ICM20948_LOW_POW_GYRO_AVG_32,
     ICM20948_LOW_POW_GYRO_AVG_64,
     ICM20948_LOW_POW_GYRO_AVG_128
-} ICM20948_low_pow_gyro_avg;
+};
 
 /************** USER_CTRL **************/
 
-typedef enum DMP_EN {
+enum DMP_EN {
     DMP_DISABLED,
     DMP_ENABLED
-} DMP_EN;
+};
 
-typedef enum FIFO_EN {
+enum FIFO_EN {
     FIFO_DISABLED,
     FIFO_ENABLED
-} FIFO_EN;
+};
 
-typedef enum I2C_MST_EN {
+enum I2C_MST_EN {
     I2C_DISABLED,
     I2C_ENABLED
-} I2C_MST_EN;
+};
 
-typedef enum I2C_IF_DIS {
+enum I2C_IF_DIS {
     I2C_MODE,
     SPI_MODE
-} I2C_IF_DIS;
+};
 
-typedef enum DMP_RST {
+enum DMP_RST {
     DMP_RST_DO_NOTHING,
     RESET_DMP
-} DMP_RST;
+};
 
-typedef enum SRAM_RST {
+enum SRAM_RST {
     SRAM_RST_DO_NOTHING,
     RESET_SRAM
-} SRAM_RST;
+};
 
-typedef enum I2C_MST_RST {
+enum I2C_MST_RST {
     I2C_RST_DO_NOTHING,
     RESET_I2C_MASTER
-} I2C_MST_RST;
+};
 
 /************** LP_CONFIG **************/
 
-typedef enum I2C_MST_CYCLE {
+enum I2C_MST_CYCLE {
     I2C_DUTY_CYCLE_MODE_DISABLED,
     I2C_DUTY_CYCLE_MODE_ENABLED
-} I2C_MST_CYCLE;
+};
 
-typedef enum ACCEL_CYCLE {
+enum ACCEL_CYCLE {
     ACCEL_DUTY_CYCLE_MODE_DISABLED,
     ACCEL_DUTY_CYCLE_MODE_ENABLED
-} ACCEL_CYCLE;
+};
 
-typedef enum GYRO_CYCLE {
+enum GYRO_CYCLE {
     GYRO_DUTY_CYCLE_MODE_DISABLED,
     GYRO_DUTY_CYCLE_MODE_ENABLED
-} GYRO_CYCLE;
+};
 
 /************** PWR_MGMT_1 **************/
 
-typedef enum DEVICE_RESET {
+enum DEVICE_RESET {
     DEVICE_RESET_DO_NOTHING,
     DEVICE_RESET_RESET_REGISTERS
-} DEVICE_RESET;
+};
 
-typedef enum SLEEP {
+enum SLEEP {
     SLEEP_MODE_DISABLED,
     SLEEP_MODE_ENABLED
-} SLEEP;
+};
 
-typedef enum LP_EN {
+enum LP_EN {
     LOW_POWER_MODE_DISABLED,
     LOW_POWER_MODE_ENABLED
-} LP_EN;
+};
 
-typedef enum TEMP_DIS {
+enum TEMP_DIS {
     TEMP_SENSOR_DISABLED,
     TEMP_SENSOR_ENABLED
-} TEMP_DIS;
+};
 
-typedef enum CLKSEL {
+enum CLKSEL {
     INTERNAL_20MHZ_CLK = 0,
     AUTO_CLK = 1,
     STOP_CLK = 7
-} CLKSEL;
+};
 
 /************** PWR_MGMT_2 **************/
 
-typedef enum GYRO_STATUS {
+enum GYRO_STATUS {
     GYRO_DISABLE = 0x7,
     GYRO_ENABLE = 0
-} GYRO_STATUS;
+};
 
-typedef enum ACCEL_STATUS {
+enum ACCEL_STATUS {
     ACCEL_DISABLE = 0x7,
     ACCEL_ENABLE = 0
-} ACCEL_STATUS;
+};
 
 /************** INT_PIN_CFG **************/
 
 
-typedef enum INT1_ACTL {
+enum INT1_ACTL {
     INT1_LOGIC_HIGH,
     INT1_LOGIC_LOW
-} INT1_ACTL;
+};
 
-typedef enum INT1_OPEN {
+enum INT1_OPEN {
     INT1_PUSH_PULL,
     INT1_OPEN_DRAIN
-} INT1_OPEN;
+};
 
-typedef enum INT1_LATCH__EN {
+enum INT1_LATCH__EN {
     INT1_INTERRUPT_PULSE_50US,
     INT1_HELD_UNTIL_CLEARED
-} INT1_LATCH__EN;
+};
 
-typedef enum INT1_ANYRD_2CLEAR {
+enum INT1_ANYRD_2CLEAR {
     INT_STATUS_READ_CLEAR,
     ANY_READ_CLEAR
-} INT1_ANYRD_2CLEAR;
+};
 
-typedef enum ACTL_FSYNC {
+enum ACTL_FSYNC {
     FSYNC_ACTIVE_HIGH,
     FSYNC_ACTIVE_LOW
-} ACTL_FSYNC;
+};
 
-typedef enum FSYNC_INT_MODE_EN {
+enum FSYNC_INT_MODE_EN {
     FSYNC_INT_DISABLE,
     FSYNC_INT_ENABLE
-} FSYNC_INT_MODE_EN;
+};
 
-typedef enum BYPASS_EN {
+enum BYPASS_EN {
     I2C_MASTER_BYPASS_MODE_DISABLE,
     I2C_MASTER_BYPASS_MODE_ENABLE
-} BYPASS_EN;
+};
 
 /************** INT_ENABLE **************/
 
 
-typedef enum REG_WOF_EN {
+enum REG_WOF_EN {
     DISABLE_WAKE_FSYNC,
     ENABLE_WAKE_FSYNC
-} REG_WOF_EN;
+};
 
-typedef enum WOM_INT_EN {
+enum WOM_INT_EN {
     DISABLE_WAKE_MOTION,
     ENABLE_WAKE_MOTION
-} WOM_INT_EN;
+};
 
-typedef enum PLL_RDY_EN {
+enum PLL_RDY_EN {
     DISABLE_PLL_RDY_INT,
     ENABLE_PLL_RDY_INT
-} PLL_RDY_EN;
+};
 
-typedef enum DMP_INT1_EN {
+enum DMP_INT1_EN {
     DISABLE_DMP_INT,
     ENABLE_DMP_INT
-} DMP_INT1_EN;
+};
 
-typedef enum I2C_MST_INT_EN {
+enum I2C_MST_INT_EN {
     DISABLE_I2C_MASTER_INT,
     ENABLE_I2C_MASTER_INT
-} I2C_MST_INT_EN;
+};
 
 /************** INT_ENABLE_1 **************/
 
-typedef enum RAW_DATA_0_RDY_EN {
+enum RAW_DATA_0_RDY_EN {
     DISABLE_RAW_DATA_INT,
     ENABLE_RAW_DATA_INT
-} RAW_DATA_0_RDY_EN;
+};
 
 /************** INT_ENABLE_2 **************/
 
-typedef enum FIFO_OVERFLOW_EN {
+enum FIFO_OVERFLOW_EN {
     DISABLE_INT_FIFO_OVERFLOW,
     ENABLE_INT_FIFO_OVERFLOW = 0x1f
-} FIFO_OVERFLOW_EN;
+};
 
 /************** INT_ENABLE_3 **************/
 
-typedef enum FIFO_WM_EN {
+enum FIFO_WM_EN {
     DISABLE_INT_FIFO_WATERMARK,
     ENABLE_INT_FIFO_WATERMARK = 0x1f
-} FIFO_WM_EN;
+};
 
 /************** FIFO_EN_1 **************/
 
-typedef enum SLV_3_FIFO_EN {
+enum SLV_3_FIFO_EN {
     DISABLE_WRITE_TO_SLV_3,
     ENABLE_WRITE_TO_SLV_3
-} SLV_3_FIFO_EN;
+};
 
-typedef enum SLV_2_FIFO_EN {
+enum SLV_2_FIFO_EN {
     DISABLE_WRITE_TO_SLV_2,
     ENABLE_WRITE_TO_SLV_2
-} SLV_2_FIFO_EN;
+};
 
-typedef enum SLV_1_FIFO_EN {
-    DISABLE_WRITE_TO_SLV_2,
+enum SLV_1_FIFO_EN {
+    DISABLE_WRITE_TO_SLV_1,
     ENABLE_WRITE_TO_SLV_1
-} SLV_1_FIFO_EN;
+};
 
-typedef enum SLV_0_FIFO_EN {
+enum SLV_0_FIFO_EN {
     DISABLE_WRITE_TO_SLV_0,
     ENABLE_WIRTE_TO_SLV_0
-} SLV_0_FIFO_EN;
+};
 
 /************** FIFO_EN_2 **************/
 
 
-typedef enum ACCEL_FIFO_EN {
+enum ACCEL_FIFO_EN {
     DISABLE_ACCEL_FIFO,
     ENABLE_ACCEL_FIFO
-} ACCEL_FIFO_EN;
+};
 
-typedef enum GYRO_Z_FIFO_EN {
+enum GYRO_Z_FIFO_EN {
     DISABLE_GYRO_Z_FIFO,
     ENABLE_GYRO_Z_FIFO
-} GYRO_Z_FIFO_EN;
+};
 
-typedef enum GYRO_Y_FIFO_EN {
+enum GYRO_Y_FIFO_EN {
     DISABLE_GYRO_Y_FIFO,
     ENABLE_GYRO_Y_FIFO
-} GYRO_Y_FIFO_EN;
+};
 
-typedef enum GYRO_X_FIFO_EN {
+enum GYRO_X_FIFO_EN {
     DISABLE_GYRO_X_FIFO,
     ENABLE_GYRO_X_FIFO
-} GYRO_X_FIFO_EN;
+};
 
-typedef enum TEMP_FIFO_EN {
+enum TEMP_FIFO_EN {
     DISABLE_TEMP_FIFO,
     ENABLE_TEMP_FIFO
-} TEMP_FIFO_EN;
+};
 
 /************** FIFO_MODE **************/
 
-typedef enum FIFO_MODE {
+enum FIFO_MODE {
     FIFO_STREAM,
     FIFO_SNAPSHOT
-} FIFO_MODE;
+};
 
-typedef enum XGYRO_CTEN {
+enum XGYRO_CTEN {
     X_GYRO_SELF_TEST_DISABLED,
     X_GYRO_SELF_TEST_ENABLED
-} XGYRO_CTEN;
+};
 
-typedef enum YGYRO_CTEN {
+enum YGYRO_CTEN {
     Y_GYRO_SELF_TEST_DISABLED,
     Y_GYRO_SELF_TEST_ENABLED
-} YGYRO_CTEN;
+};
 
-typedef enum ZGYRO_CTEN {
+enum ZGYRO_CTEN {
     Z_GYRO_SELF_TEST_DISABLED,
     Z_GYRO_SELF_TEST_ENABLED
-} ZGYRO_CTEN;
+};
 
-typedef enum GYRO_AVGCFG {
+enum GYRO_AVGCFG {
     AVERAGING_1X,
     AVERAGING_2X,
     AVERAGING_4X,
@@ -447,26 +449,26 @@ typedef enum GYRO_AVGCFG {
     AVERAGING_32X,
     AVERAGING_64X,
     AVERAGING_128X
-} GYRO_AVGCFG;
+};
 
-typedef enum ODR_ALIGN_EN {
+enum ODR_ALIGN_EN {
     DISABLE_ODR_START_TIME_ALIGNMENT,
     ENABLE_ODR_START_TIME_ALIGNMENT
-} ODR_ALIGN_EN;
+};
 
-typedef enum ACCEL_INELT_EN {
+enum ACCEL_INTEL_EN {
     WOM_LOGIC_DISABLED,
     WOM_LOGIC_ENABLED
-} ACCEL_INTEL_EN;
+};
 
-typedef enum ACCEL_INTEL_MODE_INT {
+enum ACCEL_INTEL_MODE_INT {
     INITIAL_SAMPLE,
     PREVIOUS_SAMPLE
-} ACCEL_INTEL_MODE_INT;
+};
 
 /************** ACCEL_CONFIG **************/
 
-typedef enum ACCEL_DLPFCFG {
+enum ACCEL_DLPFCFG {
     ACCEL_DLPFCFG_0,
     ACCEL_DLPFCFG_1,
     ACCEL_DLPFCFG_2,
@@ -475,58 +477,58 @@ typedef enum ACCEL_DLPFCFG {
     ACCEL_DLPFCFG_5,
     ACCEL_DLPFCFG_6,
     ACCEL_DLPFCFG_8
-} ACCEL_DLPFCFG;
+};
 
-typedef enum ACCEL_FS_SEL {
+enum ACCEL_FS_SEL {
     ACCEL_FULL_SCALE_2G,
     ACCEL_FULL_SCALE_4G,
     ACCEL_FULL_SCALE_8G,
     ACCEL_FULL_SCALE_16G
-} ACCEL_FS_SEL;
+};
 
-typedef enum ACCEL_FCHOICE {
+enum ACCEL_FCHOICE {
     ACCEL_DISABLE_DLPF,
     ACCEL_ENABLE_DLPF
-} ACCEL_FCHOICE;
+};
 
-typedef enum AX_ST_EN_REG {
+enum AX_ST_EN_REG {
     X_ACCEL_SELF_TEST_DISABLED,
     X_ACCEL_SELF_TEST_ENABLED
-} AX_ST_EN_REG;
+};
 
-typedef enum AY_ST_EN_REG {
+enum AY_ST_EN_REG {
     Y_ACCEL_SELF_TEST_DISABLED,
     Y_ACCEL_SELF_TEST_ENABLED
-} AY_ST_EN_REG;
+};
 
-typedef enum AZ_ST_EN_REG {
+enum AZ_ST_EN_REG {
     Z_ACCEL_SELF_TEST_DISABLED,
     Z_ACCEL_SELF_TEST_ENABLED
-} AZ_ST_EN_REG;
+};
 
-typedef enum DEC3_CFG {
+enum DEC3_CFG {
     AVERAGE_1_OR_4,
     AVERAGE_8,
     AVERAGE_16,
     AVERAGE_32
-} DEC3_CFG;
+};
 
-typedef enum DELAY_TIME_EN {
+enum DELAY_TIME_EN {
     DISABLE_DELAY_TIME_MEASUREMENT,
     ENABLE_DELAY_TIME_MEASURMENT
-} DELAY_TIME_EN;
+};
 
-typedef enum WOF_DEGLITCH_EN {
+enum WOF_DEGLITCH_EN {
     DISABLE_DIGITAL_DEGLITCHING,
     ENABLE_DIGITAL_DEGLITCHING
-} WOF_DEGLITCH_EN;
+};
 
-typedef enum WOF_EDGE_INT {
+enum WOF_EDGE_INT {
     LEVEL_INTERRUPT,
     EDGE_INTERRUPT
-} WOF_EDGE_INT;
+};
 
-typedef enum EXT_SYNC_SET {
+enum EXT_SYNC_SET {
     EXT_SYNC_SET_DISABLED,
     TEMP_OUT_L,
     GYRO_XOUT_L,
@@ -535,9 +537,9 @@ typedef enum EXT_SYNC_SET {
     ACCEL_XOUT_L,
     ACCEL_YOUT_L,
     ACCEL_ZOUT_L
-} EXT_SYNC_SET;
+};
 
-typedef enum TEMP_DLPFCFG {
+enum TEMP_DLPFCFG {
     LPF_CONFIG_0,
     LPF_CONFIG_1,
     LPF_CONFIG_2,
@@ -546,14 +548,14 @@ typedef enum TEMP_DLPFCFG {
     LPF_CONFIG_5,
     LPF_CONFIG_6,
     LPF_CONFIG_7
-} TEMP_DLPFCFG;
+};
 
-typedef enum REG_LP_DMP_EN {
+enum REG_LP_DMP_EN {
     DISABLE_DMP_LOW_POWER_ACCEL_MODE,
     ENABLE_DMP_LOW_POWER_ACCEL_MODE
-} REG_LP_DMP_EN;
+};
 
-typedef enum AK09916_MODE {
+enum AK09916_MODE {
     POWER_DOWN_MODE,
     SINGLE_MEASUREMENT_MODE,
     CONTINUOUS_MEASUREMENT_MODE1,
@@ -561,15 +563,15 @@ typedef enum AK09916_MODE {
     CONTINUOUS_MEASUREMENT_MODE3,
     CONTINUOUS_MEASUREMENT_MODE4,
     SELF_TEST_MODE
-} AK09916_MODE;
+};
 
-typedef enum AK09916_SRST {
+enum AK09916_SRST {
     NORMAL,
     RESET
-} AK09916_SRST;
+};
 // Structs
 
-typedef struct I2C_MST_STATUS {
+struct I2C_MST_STATUS {
     uint8_t PASS_THROUGH : 1;
     uint8_t I2C_SLV4_DONE : 1;
     uint8_t I2C_LOST_ARB : 1;
@@ -578,67 +580,55 @@ typedef struct I2C_MST_STATUS {
     uint8_t I2C_SLV2_NACK : 1;
     uint8_t I2C_SLV1_NACK : 1;
     uint8_t I2C_SLV0_NACK : 1;
-} I2C_MST_STATUS;
+};
 
-typedef struct INT_STATUS {
+struct INT_STATUS {
     uint8_t WOM_INT : 1;
     uint8_t PLL_RDY_INT : 1;
     uint8_t DMP_INT1 : 1;
     uint8_t I2C_MST_INT : 1;
-} INT_STATUS;
+};
 
-typedef struct INT_STATUS_1 {
+struct INT_STATUS_1 {
     uint8_t RAW_DATA_0_RDY_INT : 1;
-} INT_STATUS_1;
+};
 
-typedef struct INT_STATUS_2 {
+struct INT_STATUS_2 {
     uint8_t FIFO_OVERFLOW_INT : 1;
-} INT_STATUS_2;
+};
 
-typedef struct INT_STATUS_3 {
+struct INT_STATUS_3 {
     uint8_t FIFO_WM_INT : 1;
-} INT_STATUS_3;
+};
 
-typedef struct DATA_RDY_STATUS {
+struct DATA_RDY_STATUS {
     uint8_t WOF_STATUS : 1;
     uint8_t RAW_DATA_RDY : 1;
-} DATA_RDY_STATUS;
+};
 
-typedef struct AK09916_STATUS1 {
+struct AK09916_STATUS1 {
     uint8_t DRDY : 1;
     uint8_t DOR : 1;
-} AK09916_STATUS1;
+};
 
-typedef struct AK09916_STATUS2 {
+struct AK09916_STATUS2 {
     uint8_t HOFL : 1;
-} AK09916_STATUS2;
+};
 
-typedef struct xyz16Int {
+struct xyz16Int {
     uint16_t x;
     uint16_t y;
     uint16_t z;
-} xyz16Int;
+};
 
-typedef struct xyzOffset {
-    uint16_t x;
-    uint16_t y;
-    uint16_t z;
-} xyzOffset;
-
-typedef struct ak08816Xyz {
-    int16_t x;
-    int16_t y;
-    int16_t z;
-} ak08816Xyz;
-
-typedef struct accelGyroData {
+struct accelGyroData {
     xyz16Int accel;
     xyz16Int gyro;
-} accelGyroData;
+};
 
 class ICM20948_IMU {
     public:
-        ICM20948_IMU(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin, xyzOffset accel_offset, xyzOffset gyro_offset);
+        ICM20948_IMU(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin, xyz16Int accel_offset, xyz16Int gyro_offset);
 
         void setUserCtrl(
             DMP_EN dmp_en, 
@@ -702,7 +692,7 @@ class ICM20948_IMU {
         void setFifoMode(FIFO_MODE fifo_mode);
         uint16_t getFifoCount();
         DATA_RDY_STATUS dataRdyStatus();
-        xyzOffset accelOffsetOut();
+        xyz16Int accelOffsetOut();
         float timeBaseCorrectionPll();
         void setGyroSmplrtDiv(uint8_t smplrt);
         void setGyroConfig1(GYRO_DLPFCFG gyroDlpf, GYRO_FS_SEL gyroRange, GYRO_FCHOICE gyro_fchoice);
@@ -717,7 +707,7 @@ class ICM20948_IMU {
         void tempConfig(TEMP_DLPFCFG temp_dlpfcfg);
         void modCtrlUsr(REG_LP_DMP_EN reg_lp_dmp_en);
         AK09916_STATUS1 ak09916Status1();
-        ak08816Xyz ak09916MeasurementData();
+        xyz16Int ak09916MeasurementData();
         AK09916_STATUS2 ak09916Status2();
         void ak09916Control2(AK09916_MODE mode);
         void ak09916Control3(AK09916_SRST srst);
@@ -725,10 +715,10 @@ class ICM20948_IMU {
     private:
         mbed::DigitalOut& cs_pin;
         uint8_t buf[12] = {0};
-        static const float TEMP_SENSITIVITY = 333.87f;
-        static const float TEMP_OFFSET = 0.0f;
-        const xyzOffset accel_offset;
-        const xyzOffset gyro_offset;
+        static const float TEMP_SENSITIVITY;
+        static const float TEMP_OFFSET;
+        const xyz16Int accel_offset;
+        const xyz16Int gyro_offset;
 
         mbed::SPI& spi_bus;
         uint8_t currentBank;

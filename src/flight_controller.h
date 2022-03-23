@@ -1,19 +1,25 @@
-typedef struct GpsCoord {
+#pragma once
+
+#include <ms5611.h>
+
+struct GpsCoord {
     int32_t latitude;
     int32_t longitude;
-} GpsCoord;
+};
 
-typedef struct Attitude {
-    int16_t yaw;
-    int16_t pitch;
-    int16_t roll;
-} Attitude;
+struct Attitude {
+    int32_t yaw;
+    int32_t pitch;
+    int32_t roll;
+};
 
 class FlightController {
     public:
         FlightController(GpsCoord home_position);
         void updateMotorOutputs();
-        void updateYawPitchRoll(int16_t yaw, int16_t pitch, int16_t roll);
+        void updateAttitude(Attitude attitude);
+        void updateTempPressure(TEMP_AND_PRESSURE tempAndPressure);
+        
         void updateSettings(bool auto_pilot, bool altitude_hold);
     private:
         const GpsCoord home_position;

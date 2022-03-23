@@ -1,4 +1,4 @@
-#include "message_protocol.h";
+#include "message_protocol.h"
 
 
 bool MessageProtocol::decodeData(uint8_t* buffer, uint8_t size, uint8_t* bytes) {
@@ -23,6 +23,7 @@ bool MessageProtocol::decodeData(uint8_t* buffer, uint8_t size, uint8_t* bytes) 
         }
         count--;
     }
+    return true;
 }
 
 uint8_t* MessageProtocol::getMessage() {
@@ -40,7 +41,7 @@ bool MessageProtocol::encodeData(uint8_t* bytes, uint8_t size, uint8_t* buffer) 
             count++;
             buffer_pointer++;
         }
-        if ((!bytes[i]) || (count == 0xFF)) {
+        if ((!bytes[i]) || (count == 0xff)) {
             buffer[cur] = count;
             count = 1;
             cur = buffer_pointer;
@@ -49,4 +50,6 @@ bool MessageProtocol::encodeData(uint8_t* bytes, uint8_t size, uint8_t* buffer) 
             }
         }
     }
+
+    return true;
 }

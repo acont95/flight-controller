@@ -15,41 +15,45 @@ ImuManager::ImuManager(ICM20948_IMU& imu) : imu(imu){
     imu.setOdrAlignEn(ENABLE_ODR_START_TIME_ALIGNMENT);
     imu.setAccelSmplrtDiv(3);
     imu.setAccelConfig(ACCEL_DLPFCFG_0, ACCEL_FULL_SCALE_16G, ACCEL_ENABLE_DLPF);
+    imu.ak09916Control2(CONTINUOUS_MEASUREMENT_MODE4);
 }
 
-float ImuManager::getInertialRollAccel(xyz16Int xyz_body_accel) {
+fix16_t ImuManager::getInertialRollAccel(xyz16Int xyz_body_accel) {
     float mag = sqrt(pow(xyz_body_accel.y, 2.0f) + pow(xyz_body_accel.z, 2.0f));
     return atan2f(-xyz_body_accel.x, mag);
 }
 
-float ImuManager::getInertialPitchAccel(xyz16Int xyz_body_accel) {
+fix16_t ImuManager::getInertialPitchAccel(xyz16Int xyz_body_accel) {
     return atan2f(xyz_body_accel.y, xyz_body_accel.z) * 180 / (float) pi;
 }
 
-Attitude ImuManager::getAttitude() {
+void ImuManager::updateAttitude() {
     accelGyroData data = imu.readFifo();
-    Attitude attitude;
     
-    float accel_pitch = getInertialPitchAccel(data.accel);
-    float accel_roll = getInertialRollAccel(data.accel);
+    fix16_t accel_pitch = getInertialPitchAccel(data.accel);
+    fix16_t accel_roll = getInertialRollAccel(data.accel);
 
-    float gyro_roll_rate = getInertialRollRateGyro(data.gyro);
-    float gyro_pitch_rate = getInertialPitchRateGyro(data.gyro);
-    float gyro_yaw_rate = getInertialYawRateGyro(data.gyro);
+    fix16_t gyro_roll_rate = getInertialRollRateGyro(data.gyro);
+    fix16_t gyro_pitch_rate = getInertialPitchRateGyro(data.gyro);
+    fix16_t gyro_yaw_rate = getInertialYawRateGyro(data.gyro);
 
-    float gyro_roll = getInertialRollGyro(gyro_roll_rate);
-    float gyro_pitch = getInertialPitchGyro(gyro_pitch_rate);
-    float gyro_yaw = getInertialYawGyro(gyro_yaw_rate);
+    fix16_t gyro_roll = getInertialRollGyro(gyro_roll_rate);
+    fix16_t gyro_pitch = getInertialPitchGyro(gyro_pitch_rate);
+    fix16_t gyro_yaw = getInertialYawGyro(gyro_yaw_rate);
 
-    gyroRate.roll += gyro_roll;
-    gyroRate.pitch += gyro_pitch;
-    gyroRate.yaw += gyro_yaw;
+    gyroAttitude.roll += gyro_roll;
+    gyroAttitude.pitch += gyro_pitch;
+    gyroAttitude.yaw += gyro_yaw;
 
+    attitude.pitch = complementaryFilter(gyroAttitude.pitch, accel_pitch);
+    attitude.roll = complementaryFilter(gyroAttitude.roll, accel_roll);
+    if (imu.ak09916Status1().DRDY) {
+        xyz16Int magnetometer_data = imu.ak09916MeasurementData();
+        attitude.yaw = getMagnetometerYaw(magnetometer_data);
+    }
+}
 
-    // attitude.pitch = 
-    // attitude.roll = 
-    // attitude.yaw = 
-
+Attitude ImuManager::getAttitude() {
     return attitude;
 }
 
@@ -57,33 +61,72 @@ void ImuManager::setDt(uint64_t dt) {
     this->dt = dt;
 }
 
+INTERRUPT_TYPE ImuManager::getInterruptType() {
+    INT_STATUS_1 rawDataIntStatus = imu.intStatus1();
+    INT_STATUS_2 overflowInt = imu.intStatus2();
 
-float ImuManager::getInertialRollRateGyro(xyz16Int xyz_body_gyro) {
-    return xyz_body_gyro.x + xyz_body_gyro.y * sinf(previousAttitude.roll) * tanf(previousAttitude.pitch) 
-        + xyz_body_gyro.z * cosf(previousAttitude.roll) * tanf(previousAttitude.pitch);    
+    if (overflowInt.FIFO_OVERFLOW_INT) {
+        return FIFO_OVERFLOW;
+    } else if (rawDataIntStatus.RAW_DATA_0_RDY_INT) {
+        return DATA_READY;
+    } else {
+        return NO_VALID_INTERRUPT;
+    }
 }
 
-float ImuManager::getInertialPitchRateGyro(xyz16Int xyz_body_gyro) {
-    return xyz_body_gyro.y * cosf(previousAttitude.roll) - xyz_body_gyro.z * sinf(previousAttitude.roll);
+void ImuManager::resetFifo() {
+    imu.fifoRst();
 }
 
-float ImuManager::getInertialYawRateGyro(xyz16Int xyz_body_gyro) {
-    return xyz_body_gyro.y * sinf(previousAttitude.roll) / cosf(previousAttitude.pitch) 
-        + xyz_body_gyro.z * cosf(previousAttitude.roll) / cosf(previousAttitude.pitch);
+void ImuManager::interruptClear() {
+    imu.intStatus();
 }
 
-float ImuManager::getInertialRollGyro(float roll_rate) {
-    return trapezoid(roll_rate, gyroRate.roll, dt);
+
+fix16_t ImuManager::getInertialRollRateGyro(xyz16Int xyz_body_gyro) {
+    return xyz_body_gyro.x + xyz_body_gyro.y * fix16_sin(attitude.roll) * fix16_tan(attitude.pitch) 
+        + xyz_body_gyro.z * fix16_cos(attitude.roll) * fix16_tan(attitude.pitch);    
 }
 
-float ImuManager::getInertialPitchGyro(float pitch_rate) {
-    return trapezoid(pitch_rate, gyroRate.pitch, dt);
+fix16_t ImuManager::getInertialPitchRateGyro(xyz16Int xyz_body_gyro) {
+    return xyz_body_gyro.y * fix16_cos(attitude.roll) - xyz_body_gyro.z * fix16_sin(attitude.roll);
 }
 
-float ImuManager::getInertialYawGyro(float yaw_rate) {
-    return trapezoid(yaw_rate, gyroRate.yaw, dt);
+fix16_t ImuManager::getInertialYawRateGyro(xyz16Int xyz_body_gyro) {
+    return xyz_body_gyro.y * fix16_sin(attitude.roll) / fix16_cos(attitude.pitch) 
+        + xyz_body_gyro.z * fix16_cos(attitude.roll) / fix16_cos(attitude.pitch);
 }
 
-float ImuManager::trapezoid(float current_val, float previous_val, uint64_t delta) {
+fix16_t ImuManager::getInertialRollGyro(fix16_t roll_rate) {
+    return trapezoid(roll_rate, gyroAttitude.roll, dt);
+}
+
+fix16_t ImuManager::getInertialPitchGyro(fix16_t pitch_rate) {
+    return trapezoid(pitch_rate, gyroAttitude.pitch, dt);
+}
+
+fix16_t ImuManager::getInertialYawGyro(fix16_t yaw_rate) {
+    return trapezoid(yaw_rate, gyroAttitude.yaw, dt);
+}
+
+fix16_t ImuManager::trapezoid(fix16_t current_val, fix16_t previous_val, uint64_t delta) {
     return ((current_val + previous_val) / 2) * delta;
 }
+
+fix16_t ImuManager::complementaryFilter(fix16_t gyro_angle, fix16_t accel_angle) {
+    return (1-alpha) * accel_angle + alpha * gyro_angle;
+}
+
+int32_t ImuManager::getMagnetometerYaw(xyz16Int magnetometer_data) {
+    fix16_t Bfy = (magnetometer_data.z - hardIronOffset.z)*fix16_sin(attitude.roll) - (magnetometer_data.y - hardIronOffset.y)*fix16_sin(attitude.roll);
+    fix16_t Bfx = (magnetometer_data.x - hardIronOffset.x)*fix16_cos(attitude.pitch) + (magnetometer_data.y - hardIronOffset.y)
+        *fix16_sin(attitude.roll)*fix16_sin(attitude.pitch) + (magnetometer_data.z - hardIronOffset.z)*fix16_sin(attitude.pitch)*fix16_cos(attitude.roll);
+
+    return fix16_atan2(-Bfy, Bfx);
+}
+
+const xyzSigned16Int ImuManager::hardIronOffset = {.x=0, .y=0, .z=0};
+const xyzSigned16Int ImuManager::softIronOffset = {.x=0, .y=0, .z=0};
+
+const float ImuManager::pi = (float) M_PI;
+const float ImuManager::alpha = 0.95f;

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 #define MAX_MESSAGE_SIZE 254
 
