@@ -1,7 +1,7 @@
 #include "message_protocol.h"
 
 
-bool MessageProtocol::decodeData(uint8_t* buffer, uint8_t size, uint8_t* bytes) {
+bool MessageProtocol::decodeData(uint8_t buffer[], uint8_t size, uint8_t bytes[]) {
 
     uint16_t decode_pointer = 0;
     uint16_t count = 0;
@@ -30,7 +30,7 @@ uint8_t* MessageProtocol::getMessage() {
     return buffer;
 }
 
-bool MessageProtocol::encodeData(uint8_t* bytes, uint8_t size, uint8_t* buffer) {
+bool MessageProtocol::encodeData(uint8_t bytes[], uint8_t size, uint8_t buffer[]) {
     uint16_t cur = 0;
     uint16_t count = 1;
     uint16_t buffer_pointer = 1;

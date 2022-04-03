@@ -22,3 +22,13 @@ void GPSManager::readData() {
 TinyGPSPlus& GPSManager::getGPS() {
     return gps_parser;
 }
+
+void GPSManager::callback() {
+    while (true) {
+        readData();
+        // if (getGPS().location.isUpdated()) {
+        //     serial.printf("Latitude: %lf\n", getGPS().location.lat());
+        //     serial.printf("Longitude: %lf\n", getGPS().location.lng());
+        // }
+    }
+}

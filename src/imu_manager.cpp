@@ -1,6 +1,6 @@
 #include "imu_manager.h"
 
-ImuManager::ImuManager(ICM20948_IMU& imu) : imu(imu){
+ImuManager::ImuManager(ICM20948_IMU& imu, mbed::InterruptIn& imu_int, events::EventQueue& event_queue) : imu(imu), imu_int(imu_int), event_queue(event_queue){
     imu.setUserCtrl(DMP_DISABLED, FIFO_ENABLED, I2C_DISABLED, SPI_MODE, DMP_RST_DO_NOTHING, SRAM_RST_DO_NOTHING, I2C_RST_DO_NOTHING);
     imu.setPwrMgmt1(DEVICE_RESET_DO_NOTHING, SLEEP_MODE_DISABLED, LOW_POWER_MODE_DISABLED, TEMP_SENSOR_DISABLED, AUTO_CLK);
     imu.setPwrMgmt2(GYRO_ENABLE, ACCEL_ENABLE);
@@ -16,6 +16,8 @@ ImuManager::ImuManager(ICM20948_IMU& imu) : imu(imu){
     imu.setAccelSmplrtDiv(3);
     imu.setAccelConfig(ACCEL_DLPFCFG_0, ACCEL_FULL_SCALE_16G, ACCEL_ENABLE_DLPF);
     imu.ak09916Control2(CONTINUOUS_MEASUREMENT_MODE4);
+
+    imu_int.rise(mbed::callback(this, &ImuManager::isr));
 }
 
 fix16_t ImuManager::getInertialRollAccel(xyz16Int xyz_body_accel) {
@@ -123,6 +125,24 @@ int32_t ImuManager::getMagnetometerYaw(xyz16Int magnetometer_data) {
         *fix16_sin(attitude.roll)*fix16_sin(attitude.pitch) + (magnetometer_data.z - hardIronOffset.z)*fix16_sin(attitude.pitch)*fix16_cos(attitude.roll);
 
     return fix16_atan2(-Bfy, Bfx);
+}
+
+void ImuManager::isr() {
+    switch (getInterruptType()) {
+        case DATA_READY:
+            timer.stop();
+            setDt(timer.elapsed_time().count());
+            timer.reset();
+            timer.start();
+            event_queue.call(this, &ImuManager::updateAttitude);
+            break;
+        case FIFO_OVERFLOW:
+            event_queue.call(this, &ImuManager::resetFifo);
+            break;
+        case NO_VALID_INTERRUPT:
+            break;
+    }
+    event_queue.call(this, &ImuManager::interruptClear);
 }
 
 const xyzSigned16Int ImuManager::hardIronOffset = {.x=0, .y=0, .z=0};
