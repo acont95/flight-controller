@@ -26,10 +26,6 @@ bool MessageProtocol::decodeData(uint8_t buffer[], uint8_t size, uint8_t bytes[]
     return true;
 }
 
-uint8_t* MessageProtocol::getMessage() {
-    return buffer;
-}
-
 bool MessageProtocol::encodeData(uint8_t bytes[], uint8_t size, uint8_t buffer[]) {
     uint16_t cur = 0;
     uint16_t count = 1;

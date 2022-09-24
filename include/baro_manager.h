@@ -2,6 +2,7 @@
 
 #include <ms5611.h>
 #include <cmath>
+#include <USBSerial.h>
 // #include <libfixmath/fixmath.h>
 // #undef abs
 // #include <fpm/fixed.hpp>
@@ -21,6 +22,7 @@ class BaroManager {
         TEMP_PRESSURE_ALTITUDE getAltTempPressure();
         TEMP_AND_PRESSURE getTempAndPressure();
         float tempPressureToAltitude(TEMP_AND_PRESSURE sensor_data);
+        void testPrint(USBSerial& serial);
 
     private:
         MS5611Barometer& ms5611_barometer;

@@ -1,7 +1,8 @@
 #include "flight_controller.h"
 
-FlightController::FlightController(ImuManager& imu_manager ,BaroManager& baro_manager, GPSManager& gps_manager, HCRS04Ultrasonic& ultrasonic_sensor) 
-    :imu_manager(imu_manager), baro_manager(baro_manager), gps_manager(gps_manager), ultrasonic_sensor(ultrasonic_sensor) {
+FlightController::FlightController(ImuManager& imu_manager ,BaroManager& baro_manager, GPSManager& gps_manager, HCRS04Ultrasonic& ultrasonic_sensor, GCSCoordinates home_position) 
+    :imu_manager(imu_manager), baro_manager(baro_manager), gps_manager(gps_manager), ultrasonic_sensor(ultrasonic_sensor), home_position(home_position) {
+        set_point.location = home_position;
 }
 
 void FlightController::updateImuAttitude(Attitude attitude) {
@@ -23,8 +24,9 @@ void FlightController::updateBaroData() {
 
 void FlightController::updateGPSData() {
     if (gps_manager.getGPS().location.isUpdated()) {
-        system_state.location.latitude = gps_manager.getGPS().location.rawLat();
-        system_state.location.longitude = gps_manager.getGPS().location.rawLng();
+        GCSCoordinates loc = gps_manager.getLocation();
+        system_state.location.latitude = loc.latitude;
+        system_state.location.longitude = loc.longitude;
     }
     if (gps_manager.getGPS().altitude.isUpdated()) {
         system_state.altitude = gps_manager.getGPS().altitude.value();
@@ -38,7 +40,6 @@ void FlightController::updateUltrasonicData() {
     if (ultrasonic_sensor.readReady()) {
         uint16_t d_mm = ultrasonic_sensor.getDistanceMm();
         system_state.height_above_ground = d_mm;
-        // serial.printf("Distance: %i\n", (int)d_mm);
     }
 }
 
@@ -47,27 +48,60 @@ void FlightController::readSensors() {
     updateBaroData();
     updateGPSData();
     updateUltrasonicData();
+
+    timer.stop();
+    setDt(timer.elapsed_time().count());
+    timer.reset();
+    timer.start();
+}
+
+void FlightController::setDt(uint64_t dt) {
+    sensor_read_dt = dt;
 }
 
 void FlightController::pidUpdate() {
+
+    // Position Hold Outer Loop
+    if (set_point.attitude.roll == 0 && set_point.attitude.pitch == 0) {
+        error.location.latitude = system_state.location.latitude - set_point.location.latitude;
+        error.location.longitude = system_state.location.longitude - set_point.location.longitude;
+        set_point.attitude.roll = calculateControlSignal(gains.location_gain, error.location.latitude, previous_error.location.latitude, sensor_read_dt);
+        set_point.attitude.pitch = calculateControlSignal(gains.location_gain, error.location.longitude, previous_error.location.longitude, sensor_read_dt);
+    } else {
+        set_point.location = system_state.location;
+    }
+
+    // PID Inner Loop
+    uint64_t imu_dt = imu_manager.getDt();
+
     error.attitude.pitch = system_state.attitude.pitch - set_point.attitude.pitch;
+    control_signal.attitude.pitch = calculateControlSignal(gains.pitch_gain, error.attitude.pitch, previous_error.attitude.pitch, imu_dt);
     error.attitude.roll = system_state.attitude.roll - set_point.attitude.roll;
-    error.attitude.yaw = system_state.attitude.yaw - set_point.attitude.roll;
+    control_signal.attitude.roll = calculateControlSignal(gains.roll_gain, error.attitude.roll, previous_error.attitude.roll, imu_dt);
+    error.attitude.yaw = system_state.attitude.yaw - set_point.attitude.yaw;
+    control_signal.attitude.yaw = calculateControlSignal(gains.yaw_gain, error.attitude.yaw, previous_error.attitude.yaw, imu_dt);
 
-    int32_t pitch_proportional_error = error.attitude.pitch;
-    int32_t pitch_integral_error = (error.attitude.pitch - previous_error.attitude.pitch)/2 * pidUpdatePeriod.count();
-    int32_t pitch_derivative_error = (error.attitude.pitch - previous_error.attitude.pitch) / pidUpdatePeriod.count();
-    control_signal.attitude.pitch = gains.pitch_gain.Kp*pitch_proportional_error + gains.pitch_gain.Ki*pitch_integral_error + gains.pitch_gain.Kd*pitch_derivative_error;
+    // Alttiude hold
+    if (set_point.thrust == 0) {
+        error.altitude = system_state.altitude - set_point.altitude;
+        control_signal.thrust = calculateControlSignal(gains.thrust_gain, error.altitude, previous_error.altitude, sensor_read_dt);
+    } else {
+       control_signal.thrust = set_point.thrust;
+       set_point.altitude = system_state.altitude;
+    }
+    
 
-    int32_t roll_proportional_error = error.attitude.roll;
-    int32_t roll_integral_error = (error.attitude.roll - previous_error.attitude.roll)/2 * pidUpdatePeriod.count();
-    int32_t roll_derivative_error = (error.attitude.roll - previous_error.attitude.roll) / pidUpdatePeriod.count();
-    control_signal.attitude.roll = gains.roll_gain.Kp*roll_proportional_error + gains.roll_gain.Ki*roll_integral_error + gains.roll_gain.Kd*roll_derivative_error;
-
-    int32_t yaw_proportional_error = error.attitude.yaw;
-    int32_t yaw_integral_error = (error.attitude.yaw - previous_error.attitude.yaw)/2 * pidUpdatePeriod.count();
-    int32_t yaw_derivative_error = (error.attitude.yaw - previous_error.attitude.yaw) / pidUpdatePeriod.count();
-    control_signal.attitude.yaw = gains.yaw_gain.Kp*yaw_proportional_error + gains.yaw_gain.Ki*yaw_integral_error + gains.yaw_gain.Kd*yaw_derivative_error;
+    previous_error = error;
 }
 
+int32_t FlightController::calculateControlSignal(Gain gain, int32_t error, int32_t previous_error, uint64_t dt) {
+    int32_t proportional = error;
+    int32_t integral = (error - previous_error)/2 * dt;
+    int32_t derivative = (error - previous_error) / dt;
 
+    return gain.Kp*proportional + gain.Ki*integral + gain.Kd*derivative;
+}
+
+void FlightController::testPrint(USBSerial& serial) {
+
+}

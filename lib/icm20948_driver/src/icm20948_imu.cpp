@@ -1,21 +1,21 @@
 #include "icm20948_imu.h"
 
 // Constructors
-ICM20948_IMU::ICM20948_IMU(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin, xyz16Int accel_offset, xyz16Int gyro_offset) : spi_bus(spi_bus), cs_pin(cs_pin), accel_offset(accel_offset), gyro_offset(gyro_offset) {
-    currentBank = 0;
-    spi_bus.format(8, 3);
-    spi_bus.frequency(9000000);
-    setAccelOffsets();
-    setGyroOffsets();
+ICM20948_IMU::ICM20948_IMU(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin, xyz16Int accel_offset, xyz16Int gyro_offset, USBSerial& usb_serial) : spi_bus(spi_bus), cs_pin(cs_pin), accel_offset(accel_offset), gyro_offset(gyro_offset), usb_serial(usb_serial) {
+    cs_pin=1;
+    spi_bus.format(8, 0);
+    spi_bus.frequency(2000000);
+    // setAccelOffsets();
+    // setGyroOffsets();
 }
 
 // Public methods
 
 void ICM20948_IMU::setGyroConfig1(GYRO_DLPFCFG gyroDlpf, GYRO_FS_SEL gyroRange, GYRO_FCHOICE gyro_fchoice) {
     uint8_t val = 0;
-    val |= (gyroDlpf << 3);
-    val |= (gyroRange << 1);
-    val |= gyro_fchoice;
+    val |= (static_cast<int>(gyroDlpf) << 3);
+    val |= (static_cast<int>(gyroRange) << 1);
+    val |= static_cast<int>(gyro_fchoice);
     writeRegister8(2, ICM20948_GYRO_CONFIG_1, val);
 }
 
@@ -29,38 +29,38 @@ void ICM20948_IMU::setUserCtrl(
     I2C_MST_RST i2c_mst_rst
 ) {
     uint8_t val = 0;
-    val |= (dmp_en << 7);
-    val |= (fifo_en << 6);
-    val |= (i2c_mst_en << 5);
-    val |= (i2c_if_dis << 4);
-    val |= (dmp_rst << 3);
-    val |= (sram_rst << 2);
-    val |= (i2c_mst_rst << 1);
+    val |= (static_cast<int>(dmp_en) << 7);
+    val |= (static_cast<int>(fifo_en) << 6);
+    val |= (static_cast<int>(i2c_mst_en) << 5);
+    val |= (static_cast<int>(i2c_if_dis) << 4);
+    val |= (static_cast<int>(dmp_rst) << 3);
+    val |= (static_cast<int>(sram_rst) << 2);
+    val |= (static_cast<int>(i2c_mst_rst) << 1);
     writeRegister8(0, ICM20948_USER_CTRL, val);
  }
 
 void ICM20948_IMU::setLpConfig(I2C_MST_CYCLE i2c_mst_cycle, ACCEL_CYCLE accel_cycle, GYRO_CYCLE gyro_cycle) {
     uint8_t val = 0;
-    val |= (i2c_mst_cycle << 6);
-    val |= (accel_cycle << 5);
-    val |= (gyro_cycle << 4);
+    val |= (static_cast<int>(i2c_mst_cycle) << 6);
+    val |= (static_cast<int>(accel_cycle) << 5);
+    val |= (static_cast<int>(gyro_cycle) << 4);
     writeRegister8(0, ICM20948_LP_CONFIG, val);
 }
 
 void ICM20948_IMU::setPwrMgmt1(DEVICE_RESET device_reset, SLEEP sleep, LP_EN lp_en, TEMP_DIS temp_dis, CLKSEL clk_sel) {
     uint8_t val = 0;
-    val |= (device_reset << 7);
-    val |= (sleep << 6);
-    val |= (lp_en << 5);
-    val |= (temp_dis << 3);
-    val |= clk_sel;
+    val |= (static_cast<int>(device_reset) << 7);
+    val |= (static_cast<int>(sleep) << 6);
+    val |= (static_cast<int>(lp_en) << 5);
+    val |= (static_cast<int>(temp_dis) << 3);
+    val |= static_cast<int>(clk_sel);
     writeRegister8(0, ICM20948_PWR_MGMT_1, val);
 }
 
 void ICM20948_IMU::setPwrMgmt2(GYRO_STATUS gyro_status, ACCEL_STATUS accel_status) {
     uint8_t val = 0;
-    val |= (gyro_status << 3);
-    val |= accel_status;
+    val |= (static_cast<int>(accel_status) << 3);
+    val |= static_cast<int>(gyro_status);
     writeRegister8(0, ICM20948_PWR_MGMT_2, val);
 }
 
@@ -74,13 +74,13 @@ void ICM20948_IMU::setIntPinCfg(
     BYPASS_EN bypass_en
 ) {
     uint8_t val = 0;
-    val |= (int1_actl << 7);
-    val |= (int1_open << 6);
-    val |= (int1_latch_en << 5);
-    val |= (int1_anyrd_2clear << 4);
-    val |= (actl_fsync << 3);
-    val |= (fsync_int_mode_en << 2);
-    val |= (bypass_en << 1);
+    val |= (static_cast<int>(int1_actl) << 7);
+    val |= (static_cast<int>(int1_open) << 6);
+    val |= (static_cast<int>(int1_latch_en) << 5);
+    val |= (static_cast<int>(int1_anyrd_2clear) << 4);
+    val |= (static_cast<int>(actl_fsync) << 3);
+    val |= (static_cast<int>(fsync_int_mode_en) << 2);
+    val |= (static_cast<int>(bypass_en) << 1);
 
     writeRegister8(0, ICM20948_INT_PIN_CFG, val);
 }
@@ -94,25 +94,25 @@ void ICM20948_IMU::setIntEnable(
 ) {
     uint8_t val = 0;
 
-    val |= (reg_wof_en << 7);
-    val |= (wom_int_en << 3);
-    val |= (pll_rdy_en << 2);
-    val |= (dmp_int1_en << 1);
-    val |= i2c_mst_int_en;
+    val |= (static_cast<int>(reg_wof_en) << 7);
+    val |= (static_cast<int>(wom_int_en) << 3);
+    val |= (static_cast<int>(pll_rdy_en) << 2);
+    val |= (static_cast<int>(dmp_int1_en) << 1);
+    val |= static_cast<int>(i2c_mst_int_en);
 
     writeRegister8(0, ICM20948_INT_ENABLE, val);
 }
 
 void ICM20948_IMU::setIntEnable1(RAW_DATA_0_RDY_EN raw_data_0_rdy_en) {
-    writeRegister8(0, ICM20948_INT_ENABLE_1, raw_data_0_rdy_en);
+    writeRegister8(0, ICM20948_INT_ENABLE_1, static_cast<int>(raw_data_0_rdy_en));
 }
 
 void ICM20948_IMU::setIntEnable2(FIFO_OVERFLOW_EN fifo_overflow_en) {
-    writeRegister8(0, ICM20948_INT_ENABLE_2, fifo_overflow_en);
+    writeRegister8(0, ICM20948_INT_ENABLE_2, static_cast<int>(fifo_overflow_en));
 }
 
 void ICM20948_IMU::setIntEnable3(FIFO_WM_EN fifo_wm_en) {
-    writeRegister8(0, ICM20948_INT_ENABLE_3, fifo_wm_en);
+    writeRegister8(0, ICM20948_INT_ENABLE_3, static_cast<int>(fifo_wm_en));
 }
 
 I2C_MST_STATUS ICM20948_IMU::i2cMstStatus() {
@@ -183,10 +183,10 @@ void ICM20948_IMU::setFifoEn1(
     SLV_0_FIFO_EN slv_0_fifo_en
 ) {
     uint8_t val = 0;
-    val |= (slv_3_fifo_en << 3);
-    val |= (slv_2_fifo_en << 2);
-    val |= (slv_1_fifo_en << 1);
-    val |= slv_0_fifo_en;
+    val |= (static_cast<int>(slv_3_fifo_en) << 3);
+    val |= (static_cast<int>(slv_2_fifo_en) << 2);
+    val |= (static_cast<int>(slv_1_fifo_en) << 1);
+    val |= static_cast<int>(slv_0_fifo_en);
 
     writeRegister8(0, ICM20948_FIFO_EN_1, val);    
 }
@@ -200,11 +200,11 @@ void ICM20948_IMU::setFifoEn2(
     TEMP_FIFO_EN temp_fifo_en
 ) {
     uint8_t val = 0;
-    val |= (accel_fifo_en << 4);
-    val |= (gyro_z_fifo_en << 3);
-    val |= (gyro_y_fifo_en << 2);
-    val |= (gyro_x_fifo_en << 1);
-    val |= temp_fifo_en;
+    val |= (static_cast<int>(accel_fifo_en) << 4);
+    val |= (static_cast<int>(gyro_z_fifo_en) << 3);
+    val |= (static_cast<int>(gyro_y_fifo_en) << 2);
+    val |= (static_cast<int>(gyro_x_fifo_en) << 1);
+    val |= static_cast<int>(temp_fifo_en);
 
     writeRegister8(0, ICM20948_FIFO_EN_2, val);    
 }
@@ -215,7 +215,7 @@ void ICM20948_IMU::fifoRst() {
 }
 
 void ICM20948_IMU::setFifoMode(FIFO_MODE fifo_mode) {
-    writeRegister8(0, ICM20948_FIFO_MODE, fifo_mode);
+    writeRegister8(0, ICM20948_FIFO_MODE, static_cast<int>(fifo_mode));
 }
 
 uint16_t ICM20948_IMU::getFifoCount() {
@@ -235,6 +235,7 @@ DATA_RDY_STATUS ICM20948_IMU::dataRdyStatus() {
 
 xyz16Int ICM20948_IMU::accelData() {
     readRegister48(0, ICM20948_ACCEL_XOUT_H);
+
     int16_t rawX = highLowByteTo16(buf[0], buf[1]);
     int16_t rawY = highLowByteTo16(buf[2], buf[3]);
     int16_t rawZ = highLowByteTo16(buf[4], buf[5]);
@@ -323,10 +324,10 @@ void ICM20948_IMU::setGyroSmplrtDiv(uint8_t smplrt) {
 
 void ICM20948_IMU::setGyroConfig2(XGYRO_CTEN x_gyro_cten, YGYRO_CTEN y_gyro_cten, ZGYRO_CTEN z_gyro_cten, GYRO_AVGCFG gyro_avgcf) {
     uint8_t val = 0;
-    val |= (x_gyro_cten << 5);
-    val |= (y_gyro_cten << 4);
-    val |= (z_gyro_cten << 3);
-    val |= gyro_avgcf;
+    val |= (static_cast<int>(x_gyro_cten) << 5);
+    val |= (static_cast<int>(y_gyro_cten) << 4);
+    val |= (static_cast<int>(z_gyro_cten) << 3);
+    val |= static_cast<int>(gyro_avgcf);
 
     writeRegister8(2, ICM20948_GYRO_CONFIG_2, val);
 }
@@ -343,7 +344,7 @@ void ICM20948_IMU::setGyroOffsets() {
 }
 
 void ICM20948_IMU::setOdrAlignEn(ODR_ALIGN_EN odr_align_en) {
-    writeRegister8(2, ICM20948_ODR_ALIGN_EN, odr_align_en);
+    writeRegister8(2, ICM20948_ODR_ALIGN_EN, static_cast<int>(odr_align_en));
 }
 
 void ICM20948_IMU::setAccelSmplrtDiv(uint16_t smplrt) {
@@ -352,8 +353,8 @@ void ICM20948_IMU::setAccelSmplrtDiv(uint16_t smplrt) {
 
 void ICM20948_IMU::setAccelIntelCtrl(ACCEL_INTEL_EN accel_intel_en, ACCEL_INTEL_MODE_INT accel_intel_mode_int) {
     uint8_t val = 0;
-    val |= (accel_intel_en << 1);
-    val |= accel_intel_mode_int;
+    val |= (static_cast<int>(accel_intel_en) << 1);
+    val |= static_cast<int>(accel_intel_mode_int);
 
     writeRegister8(2, ICM20948_ACCEL_INTEL_CTRL, val);
 }
@@ -364,43 +365,43 @@ void ICM20948_IMU::setAccelWomThr(uint8_t wom_thr) {
 
 void ICM20948_IMU::setAccelConfig(ACCEL_DLPFCFG accel_dlpfcfg, ACCEL_FS_SEL accel_fs_sel, ACCEL_FCHOICE accel_fchoice) {
     uint8_t val = 0;
-    val |= (accel_dlpfcfg << 3);
-    val |= (accel_fs_sel << 1);
-    val |= (accel_fchoice);
+    val |= (static_cast<int>(accel_dlpfcfg) << 3);
+    val |= (static_cast<int>(accel_fs_sel) << 1);
+    val |= (static_cast<int>(accel_fchoice));
 
     writeRegister8(2, ICM20948_ACCEL_CONFIG, val);
 }
 
 void ICM20948_IMU::accelConfig2(AX_ST_EN_REG ax_st_en_reg, AY_ST_EN_REG ay_st_en_reg, AZ_ST_EN_REG az_st_en_reg, DEC3_CFG dec3_cfg) {
     uint8_t val = 0;
-    val |= (ax_st_en_reg << 4);
-    val |= (ay_st_en_reg << 3);
-    val |= (az_st_en_reg << 2);
-    val |= dec3_cfg;
+    val |= (static_cast<int>(ax_st_en_reg) << 4);
+    val |= (static_cast<int>(ay_st_en_reg) << 3);
+    val |= (static_cast<int>(az_st_en_reg) << 2);
+    val |= static_cast<int>(dec3_cfg);
 
     writeRegister8(2, ICM20948_ACCEL_CONFIG_2, val);
 }
 
 void ICM20948_IMU::fsyncConfig(DELAY_TIME_EN delay_time_en, WOF_DEGLITCH_EN wof_deglitch_en, WOF_EDGE_INT wof_edge_int, EXT_SYNC_SET ext_sync_set) {
     uint8_t val = 0;
-    val |= (delay_time_en << 7);
-    val |= (wof_deglitch_en << 5);
-    val |= (wof_edge_int << 4);
-    val |= ext_sync_set;
+    val |= (static_cast<int>(delay_time_en) << 7);
+    val |= (static_cast<int>(wof_deglitch_en) << 5);
+    val |= (static_cast<int>(wof_edge_int) << 4);
+    val |= static_cast<int>(ext_sync_set);
 
     writeRegister8(2, ICM20948_FSYNC_CONFIG, val);
 }
 
 void ICM20948_IMU::tempConfig(TEMP_DLPFCFG temp_dlpfcfg) {
     uint8_t val = 0;
-    val |= temp_dlpfcfg;
+    val |= static_cast<int>(temp_dlpfcfg);
 
     writeRegister8(2, ICM20948_TEMP_CONFIG, val);
 }
 
 void ICM20948_IMU::modCtrlUsr(REG_LP_DMP_EN reg_lp_dmp_en) {
     uint8_t val = 0;
-    val |= reg_lp_dmp_en;
+    val |= static_cast<int>(reg_lp_dmp_en);
 
     writeRegister8(2, ICM20948_MOD_CTRL_USR, val);
 }
@@ -436,14 +437,14 @@ AK09916_STATUS2 ICM20948_IMU::ak09916Status2() {
 
 void ICM20948_IMU::ak09916Control2(AK09916_MODE mode) {
     uint8_t val = 0;
-    val |= mode;
+    val |= static_cast<int>(mode);
 
     writeRegister8(0, AK09916_CNTL2, val);
 }
 
 void ICM20948_IMU::ak09916Control3(AK09916_SRST srst) {
     uint8_t val = 0;
-    val |= srst;
+    val |= static_cast<int>(srst);
 
     writeRegister8(0, AK09916_CNTL3, val);
 }
@@ -451,48 +452,62 @@ void ICM20948_IMU::ak09916Control3(AK09916_SRST srst) {
 // Private methods
 
 void ICM20948_IMU::readRegister48(uint8_t bank, uint8_t reg) {
+    reg |= 0x80;
     switchBank(bank);
+    spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(reg);
-    spi_bus.write((const char *)&buf, 6, (char *)&buf, 6);
+    spi_bus.write((const char *)buf, 6, (char *)buf, 6);
     cs_pin = 1;
+    spi_bus.unlock();
 }
 
 void ICM20948_IMU::readRegister96(uint8_t bank, uint8_t reg) {
+    reg |= 0x80;
     switchBank(bank);
+    spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(reg);
     spi_bus.write((const char *)&buf, 12, (char *)&buf, 12);
     cs_pin = 1;
+    spi_bus.unlock();
 }
 
 void ICM20948_IMU::writeRegister8(uint8_t bank, uint8_t reg, uint8_t value) {
     switchBank(bank);
+    spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(reg);
     spi_bus.write(value);
     cs_pin = 1;
+    spi_bus.unlock();
 }
 
 uint8_t ICM20948_IMU::readRegister8(uint8_t bank, uint8_t reg) {
-    uint8_t result;
+    reg |= 0x80;
+    uint8_t result = 0;
     switchBank(bank);
+    spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(reg);
     result = spi_bus.write(0x00);
     cs_pin = 1;
+    spi_bus.unlock();
 
     return result;
 }
 
 int16_t ICM20948_IMU::readRegister16(uint8_t bank, uint8_t reg) {
+    reg |= 0x80;
     int16_t result;
     switchBank(bank);
+    spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(reg);
     uint8_t msb = spi_bus.write(0x00);
     uint8_t lsb = spi_bus.write(0x00);
     cs_pin = 1;
+    spi_bus.unlock();
 
     result = (msb << 8) | lsb;
 
@@ -503,21 +518,93 @@ void ICM20948_IMU::writeRegister16(uint8_t bank, uint8_t reg, uint16_t value) {
     uint8_t msb = value >> 8;
     uint8_t lsb = value & 0xFF;
     switchBank(bank);
+    spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(reg);
     spi_bus.write(msb);
     spi_bus.write(lsb);
     cs_pin = 1;
+    spi_bus.unlock();
 }
 
 void ICM20948_IMU::switchBank(uint8_t bank) {
     if (bank != currentBank) {
         currentBank = bank;
+        spi_bus.lock();
         cs_pin = 0;
         spi_bus.write(ICM20948_REG_BANK_SEL);
+        spi_bus.write(bank<<4);
+        cs_pin = 1;
+        spi_bus.unlock();
+    }
+}
+
+void ICM20948_IMU::writeRegister(uint8_t bank, uint8_t reg, uint8_t data[], uint8_t size) {
+    switchBank(bank);
+    spi_bus.lock();
+    cs_pin = 0;
+    spi_bus.write(reg);
+    spi_bus.write((const char *) data, size, (char *) data, 0);
+    cs_pin = 1;
+    spi_bus.unlock();
+}
+
+void ICM20948_IMU::readRegister(uint8_t bank, uint8_t reg, uint8_t data[], uint8_t size) {
+
+}
+
+void ICM20948_IMU::switchDmpBank(uint8_t bank) {
+    if (bank != currentDmpBank) {
+        switchBank(0);
+        currentDmpBank = bank;
+        spi_bus.lock();
+        cs_pin = 0;
+        spi_bus.write(DMP_MEM_BANK_SEL);
         spi_bus.write(bank);
         cs_pin = 1;
+        spi_bus.unlock();
     }
+}
+
+void ICM20948_IMU::loadDmpFirmware(uint8_t dmp3_image[], uint16_t dmp3_image_size, uint8_t load_addr) {
+    uint8_t* data = dmp3_image;
+    uint16_t size = dmp3_image_size;
+    uint8_t mem_addr = load_addr;
+    uint8_t data_cmp[INV_MAX_SERIAL_READ];
+
+    int write_size;
+    while (size > 0) {
+        write_size = min(size, INV_MAX_SERIAL_WRITE);
+        if ((mem_addr & 0xff) + write_size > 0x100) {
+            // Moved across a bank
+            write_size = (mem_addr & 0xff) + write_size - 0x100;
+        }
+        switchDmpBank(mem_addr >> 8);
+        writeRegister8(0, DMP_MEM_START_ADDR, (mem_addr & 0xff));
+        writeRegister(0, DMP_MEM_R_W, data, write_size);
+
+        data += write_size;
+        size -= write_size;
+        mem_addr += write_size;
+    }
+
+    data = dmp3_image;
+    size = dmp3_image_size;
+    mem_addr = load_addr;
+    uint8_t data_cmp[INV_MAX_SERIAL_WRITE];
+
+    while (size > 0) {
+        write_size = min(size, INV_MAX_SERIAL_WRITE);
+        if ((mem_addr & 0xff) + write_size > 0x100) {
+            // Moved across a bank
+            write_size = (mem_addr & 0xff) + write_size - 0x100;
+        }
+    }
+
+}
+
+void ICM20948_IMU::setDmpStartAddress() {
+    writeRegister16(2, PRGM_STRT_ADDRH, DMP_START_ADDRESS);
 }
 
 int16_t ICM20948_IMU::highLowByteTo16(uint8_t highByte, uint8_t lowByte) {

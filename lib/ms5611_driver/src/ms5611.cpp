@@ -1,6 +1,7 @@
 #include "ms5611.h"
 
 MS5611Barometer::MS5611Barometer(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin) : spi_bus(spi_bus), cs_pin(cs_pin) {
+    cs_pin=1;
     spi_bus.format(8, 3);
     spi_bus.frequency(9000000);
     setOsr(MS5611_OSR_256);
@@ -41,10 +42,12 @@ void MS5611Barometer::setOsr(MS5611_OSR osr) {
 
 void MS5611Barometer::reset() {
     // readRegister8(MS5611_RESET);
+    spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(MS5611_RESET);
     rtos::ThisThread::sleep_for(reset_sleep);
     cs_pin = 1;
+    spi_bus.unlock();
 
 }
 
@@ -65,29 +68,35 @@ void MS5611Barometer::readProm() {
 }
 
 void MS5611Barometer::writeRegister8(uint8_t reg, uint8_t value) {
+    spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(reg);
     spi_bus.write(value);
     cs_pin = 1;
+    spi_bus.unlock();
 }
 
 uint8_t MS5611Barometer::readRegister8(uint8_t reg) {
+    spi_bus.lock();
     uint8_t result;
     cs_pin = 0;
     spi_bus.write(reg);
     result = spi_bus.write(0x00);
     cs_pin = 1;
+    spi_bus.unlock();
 
     return result;
 }
 
 uint16_t MS5611Barometer::readRegister16(uint8_t reg) {
     uint16_t result;
+    spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(reg);
     uint8_t msb = spi_bus.write(0x00);
     uint8_t lsb = spi_bus.write(0x00);
     cs_pin = 1;
+    spi_bus.unlock();
 
     result = (msb << 8) | lsb;
 
@@ -97,19 +106,23 @@ uint16_t MS5611Barometer::readRegister16(uint8_t reg) {
 void MS5611Barometer::writeRegister16(uint8_t reg, uint16_t value) {
     uint8_t msb = value >> 8;
     uint8_t lsb = value & 0xFF;
+    spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(reg);
     spi_bus.write(msb);
     spi_bus.write(lsb);
     cs_pin = 1;
+    spi_bus.unlock();
 }
 
 uint32_t MS5611Barometer::readRegister24(uint8_t reg) {
     uint8_t buf[3] = {0};
+    spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(reg);
     spi_bus.write((const char *)&buf, 3, (char *)&buf, 3);
     cs_pin = 1;
+    spi_bus.unlock();
 
     return (buf[0] << 16) | (buf[1] << 8) | (buf[2]);
 }

@@ -21,3 +21,11 @@ TEMP_AND_PRESSURE BaroManager::getTempAndPressure() {
 float BaroManager::tempPressureToAltitude(TEMP_AND_PRESSURE sensor_data) {
     return 44330 * (1 - powf((float)sensor_data.pressure/p0, 1/5.225f));
 }
+
+void BaroManager::testPrint(USBSerial& serial) {
+    ms5611_barometer.readProm();
+    TEMP_PRESSURE_ALTITUDE res = getAltTempPressure();
+    serial.printf("Baro Temperature: %i\n", (int) res.temp);
+    serial.printf("Baro Pressure: %i\n", (int) res.pressure);
+    serial.printf("Baro Altitude: %i\n", (int) res.altitude);
+}
