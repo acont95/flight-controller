@@ -15,6 +15,7 @@
 static USBSerial serial;
 static events::EventQueue event_queue(32 * EVENTS_EVENT_SIZE);
 static rtos::Thread event_queue_thread;
+static rtos::Thread imu_fifo_poll_thread;
 
 /************** SPI BUS DEFINE **************/
 static const PinName SPI_CLK = p2;
@@ -29,20 +30,22 @@ static const PinName BAROMETER_SPI_CS = p7;
 static mbed::DigitalOut baro_cs(BAROMETER_SPI_CS, 1);
 
 /************** IMU SENSOR DEFINE **************/
-static const PinName IMU_INT_PIN = p10;
+static const PinName IMU_INT_PIN = p14;
 static mbed::InterruptIn imu_int(IMU_INT_PIN);
 static const xyz16Int accelOffset = {.x=0, .y=0, .z=0};
-static const xyz16Int gyroOffset = {.x=0, .y=0, .z=0};
-// static ICM20948_IMU imu(SPI_BUS_1, cs, accelOffset, gyroOffset, serial);
-// static ImuManager imu_manager(imu, imu_int, event_queue, serial);
+// static const xyz16Int gyroOffset = {.x=0, .y=0, .z=0};
+static const xyz16Int gyroOffset = {.x=88, .y=-20, .z=10};
+
+static ICM20948_IMU imu(SPI_BUS_1, cs, accelOffset, gyroOffset, serial);
+static ImuManager imu_manager(imu, imu_int, event_queue, serial);
 
 /************** GPS SENSOR DEFINE **************/
-static const PinName GPS_SERIAL_TX = p8;
-static const PinName GPS_SERIAL_RX = p9;
+static const PinName GPS_SERIAL_TX = p16;
+static const PinName GPS_SERIAL_RX = p17;
 static mbed::UnbufferedSerial gps_serial_port(GPS_SERIAL_TX, GPS_SERIAL_RX);
 static rtos::Thread gps_serial_thread;
 static TinyGPSPlus gps;
-// static GPSManager gps_manager(gps_serial_port, gps);
+static GPSManager gps_manager(gps_serial_port, gps);
 
 /************** BAROMETER SENSOR DEFINE **************/
 MS5611Barometer baro(SPI_BUS_1, baro_cs);
@@ -50,12 +53,12 @@ BaroManager baro_manager(baro);
 
 /************** ULTRASONIC SENSOR DEFINE **************/
 
-static const PinName ULTRASONIC_ECHO_PIN = p18;
-static const PinName ULTRASONIC_TRIGGER_PIN = p19;
+static const PinName ULTRASONIC_ECHO_PIN = p27;
+static const PinName ULTRASONIC_TRIGGER_PIN = p26;
 static mbed::DigitalOut ultrasonic_trigger(ULTRASONIC_TRIGGER_PIN);
-// static HCRS04Ultrasonic ultrasonic_sensor(ULTRASONIC_ECHO_PIN, ultrasonic_trigger);
+static HCRS04Ultrasonic ultrasonic_sensor(ULTRASONIC_ECHO_PIN, ultrasonic_trigger);
 
-static TestPrinter test_printer(serial, baro_manager);
+static TestPrinter test_printer(serial, baro_manager, gps_manager, ultrasonic_sensor, imu_manager);
 
 
 /************** PERIPHERAL COMPUTER DEFINE **************/
@@ -95,10 +98,13 @@ int main() {
 
     init();
 
-    // gps_serial_thread.start(mbed::callback(&gps_manager, &GPSManager::callback));
+    gps_serial_thread.start(mbed::callback(&gps_manager, &GPSManager::callback));
+    gps_serial_thread.set_priority(osPriorityNormal);
+
     // peripheral_computer_thread.start(serialComThread);
     event_queue_thread.start(mbed::callback(&event_queue, &events::EventQueue::dispatch_forever));
-
+    event_queue_thread.set_priority(osPriorityHigh);
+    // imu_fifo_poll_thread.start(mbed::callback(&imu_manager, &ImuManager::pollFifo));
     // event_queue.call_every(pidUpdatePeriod, mbed::callback(&fc, &FlightController::readSensors));
     // event_queue.call_every(pidUpdatePeriod, mbed::callback(&fc, &FlightController::pidUpdate));
     event_queue.call_every(events::EventQueue::duration(1000), &test_printer, &TestPrinter::print);

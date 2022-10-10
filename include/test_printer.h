@@ -7,13 +7,13 @@
 
 class TestPrinter{
     public:
-        TestPrinter(USBSerial& serial, BaroManager& baro_manager);
+        TestPrinter(USBSerial& serial, BaroManager& baro_manager, GPSManager& gps_manager, HCRS04Ultrasonic& ultrasonic_sensor, ImuManager& imu_manager);
         void print();
 
     private:
         USBSerial& serial; 
-        // GPSManager& gps_manager; 
         BaroManager& baro_manager;
-        // HCRS04Ultrasonic& ultrasonic_sensor; 
-        // ImuManager& imu_manager;
+        GPSManager& gps_manager; 
+        HCRS04Ultrasonic& ultrasonic_sensor; 
+        ImuManager& imu_manager;
 };

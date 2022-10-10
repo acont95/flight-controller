@@ -38,6 +38,8 @@ class ImuManager {
         void interruptClear();
         void resetFifo();
         void testPrint(USBSerial& serial);
+        void pollFifo();
+
 
     private:
         float getInertialRollAccel(xyz16Int xyz_body_accel);
@@ -59,6 +61,7 @@ class ImuManager {
         ICM20948_IMU& imu;
         uint64_t dt = 0;
         Attitude gyroAttitude = {.yaw=0, .pitch=0, .roll=0};
+        Attitude gyroRollRate = {.yaw=0, .pitch=0, .roll=0};
         Attitude attitude = {.yaw=0, .pitch=0, .roll=0};
         static const xyzSigned16Int hardIronOffset;
         static const xyzSigned16Int softIronOffset;
@@ -66,4 +69,5 @@ class ImuManager {
         events::EventQueue& event_queue;
         mbed::Timer timer;
         USBSerial& serial;
+        uint32_t count = 0;
 };

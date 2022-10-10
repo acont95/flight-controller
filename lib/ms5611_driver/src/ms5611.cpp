@@ -2,8 +2,8 @@
 
 MS5611Barometer::MS5611Barometer(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin) : spi_bus(spi_bus), cs_pin(cs_pin) {
     cs_pin=1;
-    spi_bus.format(8, 3);
-    spi_bus.frequency(9000000);
+    // spi_bus.format(8, 3);
+    // spi_bus.frequency(9000000);
     setOsr(MS5611_OSR_256);
     reset_sleep = rtos::Kernel::Clock::duration_u32 {5};
     reset();

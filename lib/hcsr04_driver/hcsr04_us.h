@@ -4,11 +4,12 @@
 #include <USBSerial.h>
 #include <platform/mbed_wait_api.h>
 
+
 class HCRS04Ultrasonic {
     public:
         HCRS04Ultrasonic(const PinName& echo_pin, mbed::DigitalOut& trigger);
         void triggerPulse();
-        uint16_t getDistanceMm();
+        uint32_t getDistanceMm();
         bool shouldTrigger();
         bool readReady();
         void testPrint(USBSerial& serial);
@@ -20,7 +21,7 @@ class HCRS04Ultrasonic {
         void echoRise();
         void echoFall();
         std::chrono::microseconds t;
-        uint32_t c_nm_us_half = 171500;
+        uint64_t c_nm_us_half = 171500;
         bool updated = false;
         bool triggered = false;
         bool isUpdated();

@@ -154,14 +154,18 @@ INT_STATUS_1 ICM20948_IMU::intStatus1() {
 INT_STATUS_2 ICM20948_IMU::intStatus2() {
     uint8_t val = readRegister8(0, ICM20948_INT_STATUS_2);
     INT_STATUS_2 result;
-    result.FIFO_OVERFLOW_INT = (val == 0xF) ? 1 : 0;
+    // result.FIFO_OVERFLOW_INT = (val == 0xF) ? 1 : 0;
+    result.FIFO_OVERFLOW_INT = val & 1;
+
     return result;
 }
 
 INT_STATUS_3 ICM20948_IMU::intStatus3() {
     uint8_t val = readRegister8(0, ICM20948_INT_STATUS_3);
     INT_STATUS_3 result;
-    result.FIFO_WM_INT = (val == 0xF) ? 1 : 0;
+    // result.FIFO_WM_INT = (val == 0xF) ? 1 : 0;
+    result.FIFO_WM_INT = val & 1;
+
     return result;
 }
 
@@ -210,7 +214,8 @@ void ICM20948_IMU::setFifoEn2(
 }
 
 void ICM20948_IMU::fifoRst() {
-    writeRegister8(0, ICM20948_FIFO_RST, 0x1F);
+    // writeRegister8(0, ICM20948_FIFO_RST, 0x1F);
+    writeRegister8(0, ICM20948_FIFO_RST, 1);
     writeRegister8(0, ICM20948_FIFO_RST, 0);
 }
 
@@ -261,7 +266,11 @@ xyz16Int ICM20948_IMU::gyroData() {
 }
 
 accelGyroData ICM20948_IMU::readFifo() {
-    readRegister96(0, ICM20948_FIFO_R_W);
+    // readRegister96(0, ICM20948_FIFO_R_W);
+    
+    for (int i=0; i<12; i++) {
+        buf[i] = readRegister8(0, ICM20948_FIFO_R_W);
+    }
     accelGyroData res;
     res.accel.x = highLowByteTo16(buf[0], buf[1]);
     res.accel.y = highLowByteTo16(buf[2], buf[3]);
@@ -333,14 +342,22 @@ void ICM20948_IMU::setGyroConfig2(XGYRO_CTEN x_gyro_cten, YGYRO_CTEN y_gyro_cten
 }
 
 void ICM20948_IMU::setGyroOffsets() {
-    buf[0] = (-gyro_offset.x) >> 8;
-    buf[1] = (-gyro_offset.x) & 0xFF;
-    buf[2] = (-gyro_offset.y) >> 8;
-    buf[3] = (-gyro_offset.y) & 0xFF;
-    buf[4] = (-gyro_offset.z) >> 8;
-    buf[5] = (-gyro_offset.z) & 0xFF;
+    // buf[0] = (uint8_t)(gyro_offset.x) >> 8;
+    // buf[1] = (uint8_t)(gyro_offset.x) & 0xFF;
+    // buf[2] = (uint8_t)(gyro_offset.y) >> 8;
+    // buf[3] = (uint8_t)(gyro_offset.y) & 0xFF;
+    // buf[4] = (uint8_t)(gyro_offset.z) >> 8;
+    // buf[5] = (uint8_t)(gyro_offset.z) & 0xFF;
 
-    readRegister48(2, ICM20948_XG_OFFS_USRL); 
+    writeRegister8(2, ICM20948_XG_OFFS_USRH, (uint8_t)(gyro_offset.x >> 8));
+    writeRegister8(2, ICM20948_XG_OFFS_USRL, (uint8_t)(gyro_offset.x & 0xFF));
+    writeRegister8(2, ICM20948_YG_OFFS_USRH, (uint8_t)(gyro_offset.y >> 8));
+    writeRegister8(2, ICM20948_YG_OFFS_USRL, (uint8_t)(gyro_offset.y & 0xFF));
+    writeRegister8(2, ICM20948_ZG_OFFS_USRH, (uint8_t)(gyro_offset.z >> 8));
+    writeRegister8(2, ICM20948_ZG_OFFS_USRL, (uint8_t)(gyro_offset.z & 0xFF));
+
+    // readRegister48(2, ICM20948_XG_OFFS_USRH); 
+    // writeRegister(2, ICM20948_XG_OFFS_USRH, buf, 6);
 }
 
 void ICM20948_IMU::setOdrAlignEn(ODR_ALIGN_EN odr_align_en) {
@@ -448,6 +465,32 @@ void ICM20948_IMU::ak09916Control3(AK09916_SRST srst) {
 
     writeRegister8(0, AK09916_CNTL3, val);
 }
+
+float ICM20948_IMU::getGyroScaleFactor(GYRO_FS_SEL gyro_full_scale) {
+    switch (gyro_full_scale)
+    {
+    case GYRO_FS_SEL::GYRO_RANGE_250 :
+        return 131.0f;
+
+    case GYRO_FS_SEL::GYRO_RANGE_500 :
+        return 65.5f;
+    
+    case GYRO_FS_SEL::GYRO_RANGE_1000 :
+        return 32.8f;
+
+    case GYRO_FS_SEL::GYRO_RANGE_2000 :
+        return 16.4f;
+    }
+}
+
+gyroConfig1 ICM20948_IMU::getGyroConfig1() {
+    gyroConfig1 result;
+    uint8_t val = readRegister8(2, ICM20948_GYRO_CONFIG_1);
+    result.gyro_dlpfcfg = static_cast<GYRO_DLPFCFG>((val >> 3) & 0x7);
+    result.gyro_fs_sel = static_cast<GYRO_FS_SEL>((val >> 1) & 0x3);
+    result.gyro_fchoice = static_cast<GYRO_FCHOICE>(val & 0x1);
+    return result;
+}
  
 // Private methods
 
@@ -544,7 +587,7 @@ void ICM20948_IMU::writeRegister(uint8_t bank, uint8_t reg, uint8_t data[], uint
     spi_bus.lock();
     cs_pin = 0;
     spi_bus.write(reg);
-    spi_bus.write((const char *) data, size, (char *) data, 0);
+    spi_bus.write((const char *) data, size, (char *) data, size);
     cs_pin = 1;
     spi_bus.unlock();
 }
@@ -570,7 +613,7 @@ void ICM20948_IMU::loadDmpFirmware(uint8_t dmp3_image[], uint16_t dmp3_image_siz
     uint8_t* data = dmp3_image;
     uint16_t size = dmp3_image_size;
     uint8_t mem_addr = load_addr;
-    uint8_t data_cmp[INV_MAX_SERIAL_READ];
+    // uint8_t data_cmp[INV_MAX_SERIAL_READ];
 
     int write_size;
     while (size > 0) {
@@ -591,7 +634,7 @@ void ICM20948_IMU::loadDmpFirmware(uint8_t dmp3_image[], uint16_t dmp3_image_siz
     data = dmp3_image;
     size = dmp3_image_size;
     mem_addr = load_addr;
-    uint8_t data_cmp[INV_MAX_SERIAL_WRITE];
+    // uint8_t data_cmp[INV_MAX_SERIAL_WRITE];
 
     while (size > 0) {
         write_size = min(size, INV_MAX_SERIAL_WRITE);

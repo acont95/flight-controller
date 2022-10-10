@@ -25,7 +25,7 @@ void HCRS04Ultrasonic::echoFall() {
     triggered = false;
 }
 
-uint16_t HCRS04Ultrasonic::getDistanceMm() {
+uint32_t HCRS04Ultrasonic::getDistanceMm() {
     updated = false;
     return (t.count() * c_nm_us_half) / 1000000;
 }
@@ -51,7 +51,7 @@ void HCRS04Ultrasonic::testPrint(USBSerial& serial) {
         triggerPulse();
     } 
     if (readReady()) {
-        uint16_t d_mm = getDistanceMm();
-        serial.printf("Ultrasonic Sensor (mm): %i\n", (int) d_mm);
+        uint32_t d_mm = getDistanceMm();
+        serial.printf("Ultrasonic Sensor (mm): %i \n", (int)d_mm);
     }
 }
