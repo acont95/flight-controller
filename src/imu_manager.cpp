@@ -4,7 +4,6 @@ ImuManager::ImuManager(ICM20948_IMU& imu, mbed::InterruptIn& imu_int, events::Ev
     imu.setPwrMgmt1(DEVICE_RESET::DEVICE_RESET_REGISTERS, SLEEP::SLEEP_MODE_DISABLED, LP_EN::LOW_POWER_MODE_DISABLED, TEMP_DIS::TEMP_SENSOR_DISABLED, CLKSEL::AUTO_CLK);
     rtos::ThisThread::sleep_for(rtos::Kernel::Clock::duration_u32 {10});   
     imu.setPwrMgmt1(DEVICE_RESET::DEVICE_RESET_DO_NOTHING, SLEEP::SLEEP_MODE_DISABLED, LP_EN::LOW_POWER_MODE_DISABLED, TEMP_DIS::TEMP_SENSOR_DISABLED, CLKSEL::AUTO_CLK);
-    imu.setGyroOffsets();
 
     imu.setOdrAlignEn(ODR_ALIGN_EN::ENABLE_ODR_START_TIME_ALIGNMENT);
     imu.setAccelConfig(ACCEL_DLPFCFG::ACCEL_DLPFCFG_6, ACCEL_FS_SEL::ACCEL_FULL_SCALE_2G, ACCEL_FCHOICE::ACCEL_ENABLE_DLPF);
@@ -42,7 +41,6 @@ float ImuManager::getInertialPitchAccel(xyz16Int xyz_body_accel) {
 }
 
 void ImuManager::updateAttitude() {
-    // serial.printf("FIFO Count: %i\n", imu.getFifoCount());
     accelGyroData data = imu.readFifo();
     float accel_pitch = getInertialPitchAccel(data.accel);
     float accel_roll = getInertialRollAccel(data.accel);
@@ -68,12 +66,6 @@ void ImuManager::updateAttitude() {
 
     attitude.pitch = complementaryFilter(gyroAttitude.pitch, accel_pitch);
     attitude.roll = complementaryFilter(gyroAttitude.roll, accel_roll);
-    // serial.printf("Accel X: %i\n", (int)data.accel.x);
-    // serial.printf("Accel Y: %i\n", (int)data.accel.y);
-    // serial.printf("Accel Z: %i\n", (int)data.accel.z);
-    // serial.printf("Gyro X: %i\n", (int)data.gyro.x);
-    // serial.printf("Gyro Y: %i\n", (int)data.gyro.y);
-    // serial.printf("Gyro Z: %i\n", (int)data.gyro.z);
 
     count++;
     if ((count % 50) == 0) {
@@ -87,7 +79,6 @@ void ImuManager::updateAttitude() {
     //     xyz16Int magnetometer_data = imu.ak09916MeasurementData();
     //     attitude.yaw = getMagnetometerYaw(magnetometer_data);
     // }
-
 }
 
 Attitude ImuManager::getAttitude() {
@@ -170,33 +161,22 @@ void ImuManager::isr() {
 }
 
 void ImuManager::interruptHandler() {
-    // serial.printf("IMU Intterupt Triggered\n");
     switch (getInterruptType()) {
         case DATA_READY:    
-            // serial.printf("DATA_READY\n");
-
             timer.stop();
             setDt(timer.elapsed_time().count());
             timer.reset();
             timer.start();
             while (!imu.dataRdyStatus().RAW_DATA_RDY) {};
             event_queue.call(this, &ImuManager::updateAttitude);
-            // updateAttitude();
             break;
         case FIFO_OVERFLOW:
-            // serial.printf("FIFO_OVERFLOW\n");
-
             resetFifo();
-            // interruptClear();
-            // event_queue.call(this, &ImuManager::resetFifo);
             break;
         case NO_VALID_INTERRUPT:
-            // serial.printf("NO_VALID_INTERRUPT\n");
-
             break;
     }
     interruptClear();
-    // event_queue.call(this, &ImuManager::interruptClear);
 }
 
 uint64_t ImuManager::getDt() {
