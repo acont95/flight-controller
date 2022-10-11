@@ -85,7 +85,7 @@
 
 <!-- ![Product Name Screen Shot][product-screenshot] -->
 
-This goal of this project is to develop a simple yet fully functional flight controller for quadcopter UAV's to showcase all the components needed to develop such a system from scratch. Any MCU which can run MbedOS should be compatible. MbedOS specific drivers are included for an ICM20948 IMU, HCSR04 ultrasonic sensor, MS5611 barometer/thermometer. Other sensors may be supported in the future. An single board computer is used for transceiving video, flight data, and flight commands over WiFi to a ground control station. A Qt based application is included to communicate with the drone.
+The goal of this project is to develop a simple yet fully functional flight controller for quadcopter UAV's to showcase the components needed to develop such a system from scratch. Any MCU which can run MbedOS should be compatible. MbedOS specific drivers are included for the ICM20948 IMU, HCSR04 ultrasonic sensor, and MS5611 barometer/thermometer. Other sensors may be supported in the future. A single board computer is used for transceiving video, flight data, and commands over WiFi to a ground control station. A Qt based application is included to communicate with the drone.s
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
