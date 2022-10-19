@@ -13,6 +13,7 @@
 #include <test_printer.h>
 
 static USBSerial serial;
+
 static events::EventQueue event_queue(32 * EVENTS_EVENT_SIZE);
 static rtos::Thread event_queue_thread;
 static rtos::Thread imu_fifo_poll_thread;
@@ -74,7 +75,7 @@ static TestPrinter test_printer(serial, baro_manager, gps_manager, ultrasonic_se
 // const mbed::PwmOut motor3(p17);
 // const mbed::PwmOut motor4(p18);
 
-mbed::DigitalOut led(LED1);
+// mbed::DigitalOut led(LED1);
 const std::chrono::milliseconds pidUpdatePeriod(10);
 
 // FlightController fc(imu_manager, baro_manager, gps_manager, ultrasonic_sensor, gps_manager.getLocation());
@@ -92,11 +93,26 @@ const std::chrono::milliseconds pidUpdatePeriod(10);
 //     }
 // }
 
+
+static void imuSensorCallback(const void* msgin) {
+
+}
+
+static void gpsSensorCallback(const void* msgin) {
+
+}
+
+static void barometerSensorCallback(const void* msgin) {
+
+}
+
+static void heightSensorCallback(const void* msgin) {
+
+}
+
 int main() {
-
-
-
     init();
+    // SerialUSB.begin(0);
 
     gps_serial_thread.start(mbed::callback(&gps_manager, &GPSManager::callback));
     gps_serial_thread.set_priority(osPriorityNormal);
