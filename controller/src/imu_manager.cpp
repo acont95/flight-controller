@@ -1,5 +1,12 @@
 #include "imu_manager.h"
 
+static void error_loop() {
+    while(1){
+        // led = !led;
+        delay(100);
+    }
+}
+
 ImuManager::ImuManager(ICM20948_IMU& imu, mbed::InterruptIn& imu_int, events::EventQueue& event_queue, USBSerial& serial) : imu(imu), imu_int(imu_int), event_queue(event_queue), serial(serial){
     imu.setPwrMgmt1(DEVICE_RESET::DEVICE_RESET_REGISTERS, SLEEP::SLEEP_MODE_DISABLED, LP_EN::LOW_POWER_MODE_DISABLED, TEMP_DIS::TEMP_SENSOR_DISABLED, CLKSEL::AUTO_CLK);
     rtos::ThisThread::sleep_for(rtos::Kernel::Clock::duration_u32 {10});   
@@ -29,6 +36,19 @@ ImuManager::ImuManager(ICM20948_IMU& imu, mbed::InterruptIn& imu_int, events::Ev
     imu.setUserCtrl(DMP_EN::DMP_DISABLED, FIFO_EN::FIFO_ENABLED, I2C_MST_EN::I2C_DISABLED, I2C_IF_DIS::SPI_MODE, DMP_RST::DMP_RST_DO_NOTHING, SRAM_RST::SRAM_RST_DO_NOTHING, I2C_MST_RST::I2C_RST_DO_NOTHING);
 
     imu.setFifoEn2(ACCEL_FIFO_EN::ENABLE_ACCEL_FIFO, GYRO_Z_FIFO_EN::ENABLE_GYRO_Z_FIFO, GYRO_Y_FIFO_EN::ENABLE_GYRO_Y_FIFO, GYRO_X_FIFO_EN::ENABLE_GYRO_X_FIFO, TEMP_FIFO_EN::DISABLE_TEMP_FIFO);
+
+    allocator = rcl_get_default_allocator();
+    RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+    // create node
+    RCCHECK(rclc_node_init_default(&node, "imu_node", "", &support));
+    // create publisher
+    RCCHECK(rclc_publisher_init_default(
+        &attitudePublisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(flight_controller_msgs, msg, IMUAttitude),
+        "/mcu/imu_sensor_data"
+        )
+    );
 }
 
 float ImuManager::getInertialRollAccel(xyz16Int xyz_body_accel) {
@@ -75,6 +95,14 @@ void ImuManager::updateAttitude() {
         serial.printf("Gyro Pitch: %i\n", (int)gyroAttitude.pitch);
         serial.printf("Gyro Roll: %i\n", (int)gyroAttitude.roll);
     }
+
+    flight_controller_msgs__msg__IMUAttitude msg = {
+        .roll=attitude.roll,
+        .pitch=attitude.pitch,
+        .yaw=attitude.yaw
+    };
+
+    rcl_publish(&attitudePublisher, &msg, NULL);
     // if (imu.ak09916Status1().DRDY) {
     //     xyz16Int magnetometer_data = imu.ak09916MeasurementData();
     //     attitude.yaw = getMagnetometerYaw(magnetometer_data);
@@ -112,7 +140,6 @@ void ImuManager::interruptClear() {
     imu.intStatus2();
     imu.intStatus3();
 }
-
 
 float ImuManager::getInertialRollRateGyro(xyz16Int xyz_body_gyro) {
     return xyz_body_gyro.x + xyz_body_gyro.y * sinf(attitude.roll) * tanf(attitude.pitch) 
@@ -194,19 +221,6 @@ void ImuManager::testPrint(USBSerial& serial) {
     // serial.printf("Roll: %f\n", (float) attitude.roll);
     // serial.printf("Pitch: %f\n", (float) attitude.pitch);
     // serial.printf("Yaw: %f\n", (float) attitude.yaw); 
-}
-
-void ImuManager::pollFifo() {
-    while (true) {
-        uint16_t count = imu.getFifoCount();
-        // serial.printf("Count: %i\n", (int)count);
-        if (count >= 12) {
-            accelGyroData data = imu.readFifo();
-            serial.printf("Accel X: %i\n", (int)data.accel.x);
-            serial.printf("Accel Y: %i\n", (int)data.accel.y);
-            serial.printf("Accel Z: %i\n", (int)data.accel.z);
-        }
-    }
 }
 
 const xyzSigned16Int ImuManager::hardIronOffset = {.x=0, .y=0, .z=0};

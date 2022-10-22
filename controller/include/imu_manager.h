@@ -2,9 +2,14 @@
 
 #include <icm20948_imu.h>
 #include <USBSerial.h>
-
+#include <rcl/rcl.h>
+#include <rclc/rclc.h>
+#include <flight_controller_msgs/msg/imu_attitude.h>
 
 #define M_PI		3.14159265358979323846
+
+#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){error_loop();}}
+#define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
 
 enum INTERRUPT_TYPE {
     DATA_READY,
@@ -19,9 +24,9 @@ struct xyzSigned16Int {
 };
 
 struct Attitude {
-    int32_t yaw;
-    int32_t pitch;
-    int32_t roll;
+    float yaw;
+    float pitch;
+    float roll;
 };
 
 class ImuManager {
@@ -38,8 +43,6 @@ class ImuManager {
         void interruptClear();
         void resetFifo();
         void testPrint(USBSerial& serial);
-        void pollFifo();
-
 
     private:
         float getInertialRollAccel(xyz16Int xyz_body_accel);
@@ -70,4 +73,9 @@ class ImuManager {
         mbed::Timer timer;
         USBSerial& serial;
         uint32_t count = 0;
+
+        rclc_support_t support;
+        rcl_allocator_t allocator;
+        rcl_node_t node;
+        rcl_publisher_t attitudePublisher;
 };

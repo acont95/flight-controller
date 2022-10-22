@@ -9,50 +9,24 @@ void FlightController::updateImuAttitude(Attitude attitude) {
     system_state.attitude = attitude;
 }
 
-void FlightController::updateImuData() {
-    Attitude attitude = imu_manager.getAttitude();
-    system_state.attitude.roll = attitude.roll;
-    system_state.attitude.pitch = attitude.pitch;
-    system_state.attitude.yaw = attitude.yaw;
+
+void FlightController::updateBaroData(TempPressureAltitude tpa) {
+    baro_data = tpa;
+    system_state.altitude = tpa.altitude;
 }
 
-void FlightController::updateBaroData() {
-    TEMP_PRESSURE_ALTITUDE temp_pressure_attitude = baro_manager.getAltTempPressure();
-    baro_data = temp_pressure_attitude;
-    system_state.altitude = temp_pressure_attitude.altitude;
+void FlightController::updateGPSData(GCSCoordinates coordinates) {
+
+    // if (gps_manager.getGPS().altitude.isUpdated()) {
+    //     system_state.altitude = gps_manager.getGPS().altitude.value();
+    // }
+    system_state.location.latitude = coordinates.latitude;
+    system_state.location.longitude = coordinates.longitude;
 }
 
-void FlightController::updateGPSData() {
-    if (gps_manager.getGPS().location.isUpdated()) {
-        GCSCoordinates loc = gps_manager.getLocation();
-        system_state.location.latitude = loc.latitude;
-        system_state.location.longitude = loc.longitude;
-    }
-    if (gps_manager.getGPS().altitude.isUpdated()) {
-        system_state.altitude = gps_manager.getGPS().altitude.value();
-    }
-}
+void FlightController::updateHeight(int32_t height_mm) {
 
-void FlightController::updateUltrasonicData() {
-    if (ultrasonic_sensor.shouldTrigger()) {
-        ultrasonic_sensor.triggerPulse();
-    } 
-    if (ultrasonic_sensor.readReady()) {
-        uint16_t d_mm = ultrasonic_sensor.getDistanceMm();
-        system_state.height_above_ground = d_mm;
-    }
-}
-
-void FlightController::readSensors() {
-    updateImuData();
-    updateBaroData();
-    updateGPSData();
-    updateUltrasonicData();
-
-    timer.stop();
-    setDt(timer.elapsed_time().count());
-    timer.reset();
-    timer.start();
+    system_state.height_above_ground = height_mm;
 }
 
 void FlightController::setDt(uint64_t dt) {

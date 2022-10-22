@@ -1,7 +1,6 @@
 #include <mbed.h>
 #include <cstdint>
 #include <icm20948_imu.h>
-#include <message_protocol.h>
 #include <flight_controller.h>
 #include <imu_manager.h>
 #include <baro_manager.h>
@@ -11,12 +10,14 @@
 #include <gps_manager.h>
 #include <hcsr04_us.h>
 #include <test_printer.h>
+#include <micro_ros_platformio.h>
+#include <flight_controller_node.h>
+
 
 static USBSerial serial;
 
 static events::EventQueue event_queue(32 * EVENTS_EVENT_SIZE);
 static rtos::Thread event_queue_thread;
-static rtos::Thread imu_fifo_poll_thread;
 
 /************** SPI BUS DEFINE **************/
 static const PinName SPI_CLK = p2;
@@ -34,7 +35,6 @@ static mbed::DigitalOut baro_cs(BAROMETER_SPI_CS, 1);
 static const PinName IMU_INT_PIN = p14;
 static mbed::InterruptIn imu_int(IMU_INT_PIN);
 static const xyz16Int accelOffset = {.x=0, .y=0, .z=0};
-// static const xyz16Int gyroOffset = {.x=0, .y=0, .z=0};
 static const xyz16Int gyroOffset = {.x=88, .y=-20, .z=10};
 
 static ICM20948_IMU imu(SPI_BUS_1, cs, accelOffset, gyroOffset, serial);
@@ -61,13 +61,6 @@ static HCRS04Ultrasonic ultrasonic_sensor(ULTRASONIC_ECHO_PIN, ultrasonic_trigge
 
 static TestPrinter test_printer(serial, baro_manager, gps_manager, ultrasonic_sensor, imu_manager);
 
-
-/************** PERIPHERAL COMPUTER DEFINE **************/
-
-// uint8_t serial_buf[32] = {0};
-// rtos::Thread peripheral_computer_thread;
-// mbed::UnbufferedSerial pc_serial_port(USBTX, USBRX);
-
 /************** MOTOR DEFINE **************/
 
 // const mbed::PwmOut motor1(p15);
@@ -76,52 +69,65 @@ static TestPrinter test_printer(serial, baro_manager, gps_manager, ultrasonic_se
 // const mbed::PwmOut motor4(p18);
 
 // mbed::DigitalOut led(LED1);
-const std::chrono::milliseconds pidUpdatePeriod(10);
+const std::chrono::milliseconds pidUpdatePeriod(50);
 
-// FlightController fc(imu_manager, baro_manager, gps_manager, ultrasonic_sensor, gps_manager.getLocation());
-
-// void serialComThread() {
-//     uint32_t num;
-//     MessageProtocol prot = MessageProtocol();
-//     while (true) {
-//         num = serial_port.read(serial_buf, sizeof(serial_buf));
-//         if (num) {
-//             // if (prot.decodeData(serial_buf, sizeof(serial_buf))) {
-
-//             // }
-//         }
-//     }
-// }
+FlightController fc(imu_manager, baro_manager, gps_manager, ultrasonic_sensor, gps_manager.getLocation());
 
 
 static void imuSensorCallback(const void* msgin) {
-
+    const flight_controller_msgs__msg__IMUAttitude* msg = (const flight_controller_msgs__msg__IMUAttitude*) msgin;
+    Attitude a = {
+        .yaw = msg->yaw,
+        .pitch = msg->pitch,
+        .roll = msg->roll
+    };
+    fc.updateImuAttitude(a);
 }
 
 static void gpsSensorCallback(const void* msgin) {
-
+    const flight_controller_msgs__msg__GPSCoordinates* msg = (const flight_controller_msgs__msg__GPSCoordinates*) msgin;
+    GCSCoordinates c = {
+        .latitude = msg->latitude,
+        .longitude = msg->longitude
+    };
+    fc.updateGPSData(c);
 }
 
 static void barometerSensorCallback(const void* msgin) {
-
+    const flight_controller_msgs__msg__AltitudeTempPressure* msg = (const flight_controller_msgs__msg__AltitudeTempPressure*) msgin;
+    TempPressureAltitude tpa = {
+        .temp = msg->temperature,
+        .pressure = msg->pressure,
+        .altitude = msg->altitude
+    };
+    fc.updateBaroData(tpa);
 }
 
 static void heightSensorCallback(const void* msgin) {
-
+    const flight_controller_msgs__msg__HeightAboveGround* msg = (const flight_controller_msgs__msg__HeightAboveGround*) msgin;
+    fc.updateHeight(msg->height);
 }
 
 int main() {
     init();
-    // SerialUSB.begin(0);
+    FlightControllerNode fc_node;
+    fc_node.registerCallbacks(
+        imuSensorCallback,
+        gpsSensorCallback,
+        barometerSensorCallback,
+        heightSensorCallback
+    );
+    set_microros_serial_transports(SerialUSB);
+    SerialUSB.begin(0);
 
-    gps_serial_thread.start(mbed::callback(&gps_manager, &GPSManager::callback));
+    gps_serial_thread.start(mbed::callback(&gps_manager, &GPSManager::readLoop));
     gps_serial_thread.set_priority(osPriorityNormal);
 
-    // peripheral_computer_thread.start(serialComThread);
     event_queue_thread.start(mbed::callback(&event_queue, &events::EventQueue::dispatch_forever));
     event_queue_thread.set_priority(osPriorityHigh);
-    // imu_fifo_poll_thread.start(mbed::callback(&imu_manager, &ImuManager::pollFifo));
-    // event_queue.call_every(pidUpdatePeriod, mbed::callback(&fc, &FlightController::readSensors));
-    // event_queue.call_every(pidUpdatePeriod, mbed::callback(&fc, &FlightController::pidUpdate));
-    event_queue.call_every(events::EventQueue::duration(1000), &test_printer, &TestPrinter::print);
+
+    event_queue.call_every(pidUpdatePeriod, mbed::callback(&gps_manager, &GPSManager::publishGPSCoordinates));
+    event_queue.call_every(pidUpdatePeriod, mbed::callback(&baro_manager, &BaroManager::publishAltTempPressure));
+    event_queue.call_every(pidUpdatePeriod, mbed::callback(&ultrasonic_sensor, &HCRS04Ultrasonic::publishHeight));
+    // event_queue.call_every(events::EventQueue::duration(1000), &test_printer, &TestPrinter::print);
 }

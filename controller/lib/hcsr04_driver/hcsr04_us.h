@@ -3,7 +3,12 @@
 #include <mbed.h>
 #include <USBSerial.h>
 #include <platform/mbed_wait_api.h>
+#include <rcl/rcl.h>
+#include <rclc/rclc.h>
+#include <flight_controller_msgs/msg/height_above_ground.h>
 
+#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){error_loop();}}
+#define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
 
 class HCRS04Ultrasonic {
     public:
@@ -13,6 +18,7 @@ class HCRS04Ultrasonic {
         bool shouldTrigger();
         bool readReady();
         void testPrint(USBSerial& serial);
+        void publishHeight();
 
     private:
         mbed::InterruptIn echo_int;
@@ -26,4 +32,9 @@ class HCRS04Ultrasonic {
         bool triggered = false;
         bool isUpdated();
         bool isTriggered();
+
+        rclc_support_t support;
+        rcl_allocator_t allocator;
+        rcl_node_t node;
+        rcl_publisher_t heightPublisher;
 };

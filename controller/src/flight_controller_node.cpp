@@ -2,17 +2,16 @@
 
 static void error_loop() {
     while(1){
-        led = !led;
+        // led = !led;
         delay(100);
     }
 }
 
-FlightControllerNode::FlightControllerNode(Stream& stream) {
+FlightControllerNode::FlightControllerNode() {
     allocator = rcl_get_default_allocator();
-    set_microros_serial_transports(stream);
     RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
     // create node
-    RCCHECK(rclc_node_init_default(&node, "micro_ros_node", "", &support));
+    RCCHECK(rclc_node_init_default(&node, "flight_controller_node", "", &support));
 
     // create executor
     RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
@@ -22,33 +21,33 @@ FlightControllerNode::FlightControllerNode(Stream& stream) {
         &telemtryPublisher,
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(flight_controller_msgs, msg, Telemetry),
-        "telemetry"
+        "/telemetry"
         )
     );
 
-    rcl_ret_t rc = rclc_subscription_init_best_effort(
+    rclc_subscription_init_best_effort(
         &imuSensorSubscriber, 
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(flight_controller_msgs, msg, IMUAttitude), 
-        "imu_sensor_data");
+        "/mcu/imu_sensor_data");
 
-    rcl_ret_t rc = rclc_subscription_init_best_effort(
+    rclc_subscription_init_best_effort(
         &gpsSensorSubscriber, 
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(flight_controller_msgs, msg, GPSCoordinates), 
-        "gps_sensor_data");
+        "/mcu/gps_sensor_data");
 
-    rcl_ret_t rc = rclc_subscription_init_best_effort(
+    rclc_subscription_init_best_effort(
         &barometerSensorSubscriber, 
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(flight_controller_msgs, msg, AltitudeTempPressure), 
-        "barometer_sensor_data");
+        "/mcu/baro_temp_sensor_data");
 
-    rcl_ret_t rc = rclc_subscription_init_best_effort(
+    rclc_subscription_init_best_effort(
         &heightSensorSubscriber, 
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(flight_controller_msgs, msg, HeightAboveGround), 
-        "height_sensor_data");
+        "/mcu/height_sensor_data");
 }
 
 void FlightControllerNode::registerCallbacks(

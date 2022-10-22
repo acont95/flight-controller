@@ -1,1 +1,1 @@
-int32 height_above_ground
+int32 height
