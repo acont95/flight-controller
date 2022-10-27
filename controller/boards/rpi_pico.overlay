@@ -1,0 +1,9 @@
+&spi0 {
+	cs-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>;
+
+	fast@0 {
+		compatible = "spi_bus";
+		reg = <0>;
+		spi-max-frequency = <16000000>;
+	};
+};

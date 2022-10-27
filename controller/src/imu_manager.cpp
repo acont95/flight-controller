@@ -7,9 +7,9 @@ static void error_loop() {
     }
 }
 
-ImuManager::ImuManager(ICM20948_IMU& imu, mbed::InterruptIn& imu_int, events::EventQueue& event_queue, USBSerial& serial) : imu(imu), imu_int(imu_int), event_queue(event_queue), serial(serial){
+ImuManager::ImuManager(ICM20948_IMU& imu) : imu(imu){
     imu.setPwrMgmt1(DEVICE_RESET::DEVICE_RESET_REGISTERS, SLEEP::SLEEP_MODE_DISABLED, LP_EN::LOW_POWER_MODE_DISABLED, TEMP_DIS::TEMP_SENSOR_DISABLED, CLKSEL::AUTO_CLK);
-    rtos::ThisThread::sleep_for(rtos::Kernel::Clock::duration_u32 {10});   
+    // rtos::ThisThread::sleep_for(rtos::Kernel::Clock::duration_u32 {10});   
     imu.setPwrMgmt1(DEVICE_RESET::DEVICE_RESET_DO_NOTHING, SLEEP::SLEEP_MODE_DISABLED, LP_EN::LOW_POWER_MODE_DISABLED, TEMP_DIS::TEMP_SENSOR_DISABLED, CLKSEL::AUTO_CLK);
 
     imu.setOdrAlignEn(ODR_ALIGN_EN::ENABLE_ODR_START_TIME_ALIGNMENT);
@@ -212,11 +212,11 @@ uint64_t ImuManager::getDt() {
 
 void ImuManager::testPrint(USBSerial& serial) {
     xyz16Int res = imu.accelData();
-    serial.printf("X: %i\n", (int) res.x);
-    serial.printf("Y: %i\n", (int) res.y);
-    serial.printf("Z: %i\n", (int) res.z); 
-    serial.printf("Pitch: %f\n", getInertialPitchAccel(res));
-    serial.printf("Roll: %f\n", getInertialRollAccel(res));
+    // serial.printf("X: %i\n", (int) res.x);
+    // serial.printf("Y: %i\n", (int) res.y);
+    // serial.printf("Z: %i\n", (int) res.z); 
+    // serial.printf("Pitch: %f\n", getInertialPitchAccel(res));
+    // serial.printf("Roll: %f\n", getInertialRollAccel(res));
 
     // serial.printf("Roll: %f\n", (float) attitude.roll);
     // serial.printf("Pitch: %f\n", (float) attitude.pitch);

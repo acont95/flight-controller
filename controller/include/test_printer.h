@@ -4,6 +4,7 @@
 #include <baro_manager.h>
 #include <gps_manager.h>
 #include <hcsr04_us.h>
+#include <zephyr/kernel.h>
 
 class TestPrinter{
     public:

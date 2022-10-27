@@ -1,8 +1,5 @@
 #pragma once
 
-#include <TinyGPS++.h>
-#include <mbed.h>
-#include <USBSerial.h>
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 #include <flight_controller_msgs/msg/gps_coordinates.h>
@@ -19,10 +16,10 @@ class GPSManager{
     public:
         GPSManager(mbed::UnbufferedSerial& serial_connection, TinyGPSPlus& gps_parser); 
         void readData();
-        TinyGPSPlus& getGPS();
+        // TinyGPSPlus& getGPS();
         void readLoop();
         GCSCoordinates getLocation();
-        void testPrint(USBSerial& serial);
+        // void testPrint(USBSerial& serial);
         void publishGPSCoordinates();
 
     private:

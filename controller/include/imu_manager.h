@@ -1,7 +1,6 @@
 #pragma once
 
 #include <icm20948_imu.h>
-#include <USBSerial.h>
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 #include <flight_controller_msgs/msg/imu_attitude.h>
@@ -34,7 +33,7 @@ class ImuManager {
     // Accel reference: https://www.nxp.com/files-static/sensors/doc/app_note/AN3461.pdf
 
     public:
-        ImuManager(ICM20948_IMU& imu, mbed::InterruptIn& imu_int, events::EventQueue& event_queue, USBSerial& serial);
+        ImuManager(ICM20948_IMU& imu);
         void updateAttitude();
         void setDt(uint64_t dt);
         uint64_t getDt();

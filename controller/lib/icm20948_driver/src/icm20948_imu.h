@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstdint>
-#include <mbed.h>
-#include <USBSerial.h>
+#include <spi_bus.h>
+#include <gpio_interface.h>
+#include <math.h>
+#include <algorithm.h>
 
 // #define ICM20948_USE_DMP
 #define INV_MAX_SERIAL_WRITE 16
@@ -727,7 +729,7 @@ struct gyroConfig1{
 
 class ICM20948_IMU {
     public:
-        ICM20948_IMU(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin, xyz16Int accel_offset, xyz16Int gyro_offset, USBSerial& usb_serial);
+        ICM20948_IMU(SPIBusMaster& spi_bus, GPIOOutputInterface& cs_pin, xyz16Int accel_offset, xyz16Int gyro_offset);
 
         void setUserCtrl(
             DMP_EN dmp_en, 
@@ -817,14 +819,13 @@ class ICM20948_IMU {
         void setGyroOffsets();
         float getGyroScaleFactor(GYRO_FS_SEL gyro_full_scale);
     private:
-        mbed::SPI& spi_bus;
-        mbed::DigitalOut& cs_pin;
+        SPIBusMaster& spi_bus;
+        GPIOOutputInterface& cs_pin;
         uint8_t buf[12] = {0};
         static const float TEMP_SENSITIVITY;
         static const float TEMP_OFFSET;
         const xyz16Int accel_offset;
         const xyz16Int gyro_offset;
-        USBSerial& usb_serial;
 
         uint8_t currentBank = 0;
         uint8_t currentDmpBank = 0;

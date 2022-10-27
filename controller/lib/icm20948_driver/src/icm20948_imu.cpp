@@ -1,10 +1,11 @@
 #include "icm20948_imu.h"
 
 // Constructors
-ICM20948_IMU::ICM20948_IMU(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin, xyz16Int accel_offset, xyz16Int gyro_offset, USBSerial& usb_serial) : spi_bus(spi_bus), cs_pin(cs_pin), accel_offset(accel_offset), gyro_offset(gyro_offset), usb_serial(usb_serial) {
-    cs_pin=1;
-    spi_bus.format(8, 0);
-    spi_bus.frequency(2000000);
+ICM20948_IMU::ICM20948_IMU(SPIBusMaster& spi_bus, GPIOOutputInterface& cs_pin, xyz16Int accel_offset, xyz16Int gyro_offset) : spi_bus(spi_bus), cs_pin(cs_pin), accel_offset(accel_offset), gyro_offset(gyro_offset) {
+    cs_pin.setHigh();
+    // cs_pin=1;
+    // spi_bus.format(8, 0);
+    // spi_bus.frequency(2000000);
     // setAccelOffsets();
     // setGyroOffsets();
 }
@@ -498,10 +499,10 @@ void ICM20948_IMU::readRegister48(uint8_t bank, uint8_t reg) {
     reg |= 0x80;
     switchBank(bank);
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
-    spi_bus.write((const char *)buf, 6, (char *)buf, 6);
-    cs_pin = 1;
+    spi_bus.write(buf, 6, buf, 6);
+    cs_pin.setHigh();
     spi_bus.unlock();
 }
 
@@ -509,20 +510,20 @@ void ICM20948_IMU::readRegister96(uint8_t bank, uint8_t reg) {
     reg |= 0x80;
     switchBank(bank);
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
-    spi_bus.write((const char *)&buf, 12, (char *)&buf, 12);
-    cs_pin = 1;
+    spi_bus.write(buf, 12, buf, 12);
+    cs_pin.setHigh();
     spi_bus.unlock();
 }
 
 void ICM20948_IMU::writeRegister8(uint8_t bank, uint8_t reg, uint8_t value) {
     switchBank(bank);
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
     spi_bus.write(value);
-    cs_pin = 1;
+    cs_pin.setHigh();
     spi_bus.unlock();
 }
 
@@ -531,10 +532,10 @@ uint8_t ICM20948_IMU::readRegister8(uint8_t bank, uint8_t reg) {
     uint8_t result = 0;
     switchBank(bank);
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
     result = spi_bus.write(0x00);
-    cs_pin = 1;
+    cs_pin.setHigh();
     spi_bus.unlock();
 
     return result;
@@ -545,11 +546,11 @@ int16_t ICM20948_IMU::readRegister16(uint8_t bank, uint8_t reg) {
     int16_t result;
     switchBank(bank);
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
     uint8_t msb = spi_bus.write(0x00);
     uint8_t lsb = spi_bus.write(0x00);
-    cs_pin = 1;
+    cs_pin.setHigh();
     spi_bus.unlock();
 
     result = (msb << 8) | lsb;
@@ -562,11 +563,11 @@ void ICM20948_IMU::writeRegister16(uint8_t bank, uint8_t reg, uint16_t value) {
     uint8_t lsb = value & 0xFF;
     switchBank(bank);
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
     spi_bus.write(msb);
     spi_bus.write(lsb);
-    cs_pin = 1;
+    cs_pin.setHigh();
     spi_bus.unlock();
 }
 
@@ -574,10 +575,10 @@ void ICM20948_IMU::switchBank(uint8_t bank) {
     if (bank != currentBank) {
         currentBank = bank;
         spi_bus.lock();
-        cs_pin = 0;
+        cs_pin.setLow();
         spi_bus.write(ICM20948_REG_BANK_SEL);
         spi_bus.write(bank<<4);
-        cs_pin = 1;
+        cs_pin.setHigh();
         spi_bus.unlock();
     }
 }
@@ -585,10 +586,10 @@ void ICM20948_IMU::switchBank(uint8_t bank) {
 void ICM20948_IMU::writeRegister(uint8_t bank, uint8_t reg, uint8_t data[], uint8_t size) {
     switchBank(bank);
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
-    spi_bus.write((const char *) data, size, (char *) data, size);
-    cs_pin = 1;
+    spi_bus.write(data, size, data, size);
+    cs_pin.setHigh();
     spi_bus.unlock();
 }
 
@@ -601,10 +602,10 @@ void ICM20948_IMU::switchDmpBank(uint8_t bank) {
         switchBank(0);
         currentDmpBank = bank;
         spi_bus.lock();
-        cs_pin = 0;
+        cs_pin.setLow();
         spi_bus.write(DMP_MEM_BANK_SEL);
         spi_bus.write(bank);
-        cs_pin = 1;
+        cs_pin.setHigh();
         spi_bus.unlock();
     }
 }
