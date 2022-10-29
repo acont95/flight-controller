@@ -1,7 +1,7 @@
 #pragma once
 
 #include <gpio_interface.h>
-#include <chrono>
+// #include <chrono>
 
 class HCRS04Ultrasonic {
     public:
@@ -15,7 +15,7 @@ class HCRS04Ultrasonic {
         GPIOOutputInterface& trigger;
         void echoRise();
         void echoFall();
-        std::chrono::microseconds t;
+        // std::chrono::microseconds t;
         uint64_t c_nm_us_half = 171500;
         bool updated = false;
         bool triggered = false;

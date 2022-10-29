@@ -2,7 +2,6 @@
 
 #include <ms5611.h>
 #include <cmath>
-#include <USBSerial.h>
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 #include <flight_controller_msgs/msg/altitude_temp_pressure.h>
@@ -24,7 +23,7 @@ class BaroManager {
         TempPressureAltitude getAltTempPressure();
         TEMP_AND_PRESSURE getTempAndPressure();
         float tempPressureToAltitude(TEMP_AND_PRESSURE sensor_data);
-        void testPrint(USBSerial& serial);
+        // void testPrint(USBSerial& serial);
         void publishAltTempPressure();
 
     private:

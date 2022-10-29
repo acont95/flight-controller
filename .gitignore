@@ -5,3 +5,6 @@
 .vscode/ipch
 *.json
 *.csv
+controller/prj.conf
+modules/
+build/
