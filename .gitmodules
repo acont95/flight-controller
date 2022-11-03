@@ -4,3 +4,6 @@
 [submodule "controller/pico-sdk"]
 	path = controller/pico-sdk
 	url = https://github.com/raspberrypi/pico-sdk.git
+[submodule "controller/micro_ros_raspberrypi_pico_sdk"]
+	path = controller/micro_ros_raspberrypi_pico_sdk
+	url = https://github.com/acont95/micro_ros_raspberrypi_pico_sdk.git
