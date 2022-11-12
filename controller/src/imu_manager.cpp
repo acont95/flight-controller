@@ -1,22 +1,24 @@
-#include "imu_manager.h"
+#include "imu_manager.hpp"
 
-static void error_loop() {
-    while(1){
-        // led = !led;
-        delay(100);
-    }
-}
+// static void error_loop() {
+//     while(1){
+//         // led = !led;
+//         delay(100);
+//     }
+// }
 
-ImuManager::ImuManager(ICM20948_IMU& imu) : imu(imu){
+ImuManager::ImuManager(ICM20948_IMU& imu, SleepInterface& sleeper, TimerInterface& timer) : imu(imu), sleeper(sleeper), timer(timer){}
+
+void ImuManager::init() {
     imu.setPwrMgmt1(DEVICE_RESET::DEVICE_RESET_REGISTERS, SLEEP::SLEEP_MODE_DISABLED, LP_EN::LOW_POWER_MODE_DISABLED, TEMP_DIS::TEMP_SENSOR_DISABLED, CLKSEL::AUTO_CLK);
-    // rtos::ThisThread::sleep_for(rtos::Kernel::Clock::duration_u32 {10});   
+    sleeper.sleepMs(100);
     imu.setPwrMgmt1(DEVICE_RESET::DEVICE_RESET_DO_NOTHING, SLEEP::SLEEP_MODE_DISABLED, LP_EN::LOW_POWER_MODE_DISABLED, TEMP_DIS::TEMP_SENSOR_DISABLED, CLKSEL::AUTO_CLK);
 
     imu.setOdrAlignEn(ODR_ALIGN_EN::ENABLE_ODR_START_TIME_ALIGNMENT);
     imu.setAccelConfig(ACCEL_DLPFCFG::ACCEL_DLPFCFG_6, ACCEL_FS_SEL::ACCEL_FULL_SCALE_2G, ACCEL_FCHOICE::ACCEL_ENABLE_DLPF);
-    imu.setAccelSmplrtDiv(12);
-    imu.setGyroConfig1(GYRO_DLPFCFG::GYRO_DLPF_6, GYRO_FS_SEL::GYRO_RANGE_500, GYRO_FCHOICE::GYRO_ENABLE_DLPF);
-    imu.setGyroSmplrtDiv(12);
+    imu.setAccelSmplrtDiv(2);
+    imu.setGyroConfig1(GYRO_DLPFCFG::GYRO_DLPF_6, GYRO_FS_SEL::GYRO_RANGE_1000, GYRO_FCHOICE::GYRO_ENABLE_DLPF);
+    imu.setGyroSmplrtDiv(2);
     imu.setGyroOffsets();
 
     imu.setIntPinCfg(
@@ -31,46 +33,50 @@ ImuManager::ImuManager(ICM20948_IMU& imu) : imu(imu){
 
     imu.setIntEnable1(RAW_DATA_0_RDY_EN::ENABLE_RAW_DATA_INT);
     imu.setIntEnable2(FIFO_OVERFLOW_EN::ENABLE_INT_FIFO_OVERFLOW);
-    imu_int.rise(mbed::callback(this, &ImuManager::isr));
 
     imu.setUserCtrl(DMP_EN::DMP_DISABLED, FIFO_EN::FIFO_ENABLED, I2C_MST_EN::I2C_DISABLED, I2C_IF_DIS::SPI_MODE, DMP_RST::DMP_RST_DO_NOTHING, SRAM_RST::SRAM_RST_DO_NOTHING, I2C_MST_RST::I2C_RST_DO_NOTHING);
 
     imu.setFifoEn2(ACCEL_FIFO_EN::ENABLE_ACCEL_FIFO, GYRO_Z_FIFO_EN::ENABLE_GYRO_Z_FIFO, GYRO_Y_FIFO_EN::ENABLE_GYRO_Y_FIFO, GYRO_X_FIFO_EN::ENABLE_GYRO_X_FIFO, TEMP_FIFO_EN::DISABLE_TEMP_FIFO);
 
-    allocator = rcl_get_default_allocator();
-    RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
-    // create node
-    RCCHECK(rclc_node_init_default(&node, "imu_node", "", &support));
-    // create publisher
-    RCCHECK(rclc_publisher_init_default(
-        &attitudePublisher,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(flight_controller_msgs, msg, IMUAttitude),
-        "/mcu/imu_sensor_data"
-        )
-    );
+    // allocator = rcl_get_default_allocator();
+    // RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+    // // create node
+    // RCCHECK(rclc_node_init_default(&node, "imu_node", "", &support));
+    // // create publisher
+    // RCCHECK(rclc_publisher_init_default(
+    //     &attitudePublisher,
+    //     &node,
+    //     ROSIDL_GET_MSG_TYPE_SUPPORT(flight_controller_msgs, msg, IMUAttitude),
+    //     "/mcu/imu_sensor_data"
+    //     )
+    // );
 }
 
 float ImuManager::getInertialRollAccel(xyz16Int xyz_body_accel) {
-    float mag = sqrt(pow(xyz_body_accel.y, 2.0f) + pow(xyz_body_accel.z, 2.0f));
-    return atan2f(-xyz_body_accel.x, mag) * 180 / (float) pi;
+    float mag = sqrt(pow(xyz_body_accel.x, 2.0f) + pow(xyz_body_accel.z, 2.0f));
+    return -atan2f(-xyz_body_accel.y, mag) * 180 / (float) pi;
 }
 
 float ImuManager::getInertialPitchAccel(xyz16Int xyz_body_accel) {
-    return atan2f(xyz_body_accel.y, xyz_body_accel.z) * 180 / (float) pi;
+    return -atan2f(xyz_body_accel.x, xyz_body_accel.z) * 180 / (float) pi;
 }
 
 void ImuManager::updateAttitude() {
     accelGyroData data = imu.readFifo();
+
     float accel_pitch = getInertialPitchAccel(data.accel);
     float accel_roll = getInertialRollAccel(data.accel);
 
     GYRO_FS_SEL gyro_fs_sel = imu.getGyroConfig1().gyro_fs_sel;
     float gyro_scale_factor = imu.getGyroScaleFactor(gyro_fs_sel);
 
-    float gyro_roll_rate = getInertialRollRateGyro(data.gyro) / gyro_scale_factor;
-    float gyro_pitch_rate = getInertialPitchRateGyro(data.gyro) / gyro_scale_factor;
-    float gyro_yaw_rate = getInertialYawRateGyro(data.gyro) / gyro_scale_factor;
+    data.gyro.x /= gyro_scale_factor;
+    data.gyro.y /= gyro_scale_factor;
+    data.gyro.z /= gyro_scale_factor;
+
+    float gyro_roll_rate = getInertialRollRateGyro(data.gyro);
+    float gyro_pitch_rate = getInertialPitchRateGyro(data.gyro);
+    float gyro_yaw_rate = getInertialYawRateGyro(data.gyro);
 
     float gyro_roll = getInertialRollGyro(gyro_roll_rate);
     float gyro_pitch = getInertialPitchGyro(gyro_pitch_rate);
@@ -89,20 +95,27 @@ void ImuManager::updateAttitude() {
 
     count++;
     if ((count % 50) == 0) {
-        serial.printf("FIFO Count: %i\n", imu.getFifoCount());
-        serial.printf("Pitch: %i\n", (int)accel_pitch);
-        serial.printf("Roll: %i\n", (int)accel_roll);
-        serial.printf("Gyro Pitch: %i\n", (int)gyroAttitude.pitch);
-        serial.printf("Gyro Roll: %i\n", (int)gyroAttitude.roll);
+        printf("SCALE: %f\n", gyro_scale_factor);
+        printf("FIFO Count: %i\n", imu.getFifoCount());
+        printf("Pitch: %f\n", attitude.pitch);
+        printf("Roll: %f\n", attitude.roll);
+        printf("Gyro Pitch: %f\n", gyroAttitude.pitch);
+        printf("Gyro Roll: %f\n", gyroAttitude.roll);
+        printf("Gyro Pitch Rate: %f\n", gyro_pitch_rate);
+        printf("Gyro Roll Rate: %f\n", gyro_roll_rate);
+        printf("Gyro X: %i\n", (int)data.gyro.x);
+        printf("Gyro Y: %i\n", (int)data.gyro.y);
+        printf("Gyro Z: %i\n", (int)data.gyro.z);
+
     }
 
-    flight_controller_msgs__msg__IMUAttitude msg = {
-        .roll=attitude.roll,
-        .pitch=attitude.pitch,
-        .yaw=attitude.yaw
-    };
+    // flight_controller_msgs__msg__IMUAttitude msg = {
+    //     .roll=attitude.roll,
+    //     .pitch=attitude.pitch,
+    //     .yaw=attitude.yaw
+    // };
 
-    rcl_publish(&attitudePublisher, &msg, NULL);
+    // rcl_publish(&attitudePublisher, &msg, NULL);
     // if (imu.ak09916Status1().DRDY) {
     //     xyz16Int magnetometer_data = imu.ak09916MeasurementData();
     //     attitude.yaw = getMagnetometerYaw(magnetometer_data);
@@ -142,12 +155,12 @@ void ImuManager::interruptClear() {
 }
 
 float ImuManager::getInertialRollRateGyro(xyz16Int xyz_body_gyro) {
-    return xyz_body_gyro.x + xyz_body_gyro.y * sinf(attitude.roll) * tanf(attitude.pitch) 
-        + xyz_body_gyro.z * cosf(attitude.roll) * tanf(attitude.pitch);    
+    return xyz_body_gyro.x + xyz_body_gyro.y * sinf(gyroAttitude.roll * M_PI / 180) * tanf(gyroAttitude.pitch  * M_PI / 180) 
+        + xyz_body_gyro.z * cosf(gyroAttitude.roll  * M_PI / 180) * tanf(gyroAttitude.pitch  * M_PI / 180);    
 }
 
 float ImuManager::getInertialPitchRateGyro(xyz16Int xyz_body_gyro) {
-    return xyz_body_gyro.y * cosf(attitude.roll) - xyz_body_gyro.z * sinf(attitude.roll);
+    return xyz_body_gyro.y * cosf(gyroAttitude.roll  * M_PI / 180) - xyz_body_gyro.x * sinf(gyroAttitude.roll  * M_PI / 180);
 }
 
 float ImuManager::getInertialYawRateGyro(xyz16Int xyz_body_gyro) {
@@ -168,7 +181,10 @@ float ImuManager::getInertialYawGyro(float yaw_rate) {
 }
 
 float ImuManager::trapezoid(float current_val, float previous_val, uint64_t delta) {
-    return ((current_val + previous_val) / 2) * (delta / 2000000.0f);
+    // return ((current_val + previous_val) / 2) * (delta / 1000000.0f);
+    // return ((current_val + previous_val) / 2) * 0.011555f;
+    return ((current_val + previous_val) / 2) * 0.00177777f;
+
 }
 
 float ImuManager::complementaryFilter(float gyro_angle, float accel_angle) {
@@ -184,18 +200,19 @@ float ImuManager::getMagnetometerYaw(xyz16Int magnetometer_data) {
 }
 
 void ImuManager::isr() {
-    event_queue.call(this, &ImuManager::interruptHandler);
+    // event_queue.call(this, &ImuManager::interruptHandler);
 }
 
 void ImuManager::interruptHandler() {
+    // TO DO PASS DT TO TASK
     switch (getInterruptType()) {
         case DATA_READY:    
             timer.stop();
-            setDt(timer.elapsed_time().count());
-            timer.reset();
+            // setDt(timer.elapsed_time().count());
+            setDt(timer.elapsedUs());
             timer.start();
             while (!imu.dataRdyStatus().RAW_DATA_RDY) {};
-            event_queue.call(this, &ImuManager::updateAttitude);
+            updateAttitude();
             break;
         case FIFO_OVERFLOW:
             resetFifo();
@@ -210,17 +227,17 @@ uint64_t ImuManager::getDt() {
     return dt;
 }
 
-void ImuManager::testPrint(USBSerial& serial) {
-    xyz16Int res = imu.accelData();
-    // serial.printf("X: %i\n", (int) res.x);
-    // serial.printf("Y: %i\n", (int) res.y);
-    // serial.printf("Z: %i\n", (int) res.z); 
-    // serial.printf("Pitch: %f\n", getInertialPitchAccel(res));
-    // serial.printf("Roll: %f\n", getInertialRollAccel(res));
+void ImuManager::testPrint() {
+    xyz16Int res = imu.gyroData();
+    printf("X: %i\n", (int) res.x);
+    printf("Y: %i\n", (int) res.y);
+    printf("Z: %i\n", (int) res.z); 
+    // printf("Pitch: %f\n", getInertialPitchAccel(res));
+    // printf("Roll: %f\n", getInertialRollAccel(res));
 
-    // serial.printf("Roll: %f\n", (float) attitude.roll);
-    // serial.printf("Pitch: %f\n", (float) attitude.pitch);
-    // serial.printf("Yaw: %f\n", (float) attitude.yaw); 
+    // printf("Roll: %f\n", (float) attitude.roll);
+    // printf("Pitch: %f\n", (float) attitude.pitch);
+    // printf("Yaw: %f\n", (float) attitude.yaw); 
 }
 
 const xyzSigned16Int ImuManager::hardIronOffset = {.x=0, .y=0, .z=0};

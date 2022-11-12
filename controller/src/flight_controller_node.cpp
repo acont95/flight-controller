@@ -87,5 +87,4 @@ void FlightControllerNode::registerCallbacks(
 
 void FlightControllerNode::publishTelemetry(flight_controller_msgs__msg__Telemetry msg) {
     RCSOFTCHECK(rcl_publish(&telemtryPublisher, &msg, NULL));
-
 }

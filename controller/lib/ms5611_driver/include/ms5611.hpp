@@ -1,7 +1,10 @@
 #pragma once
 
 #include <cstdint>
-// #include <mbed.h>
+#include <gpio_output_interface.hpp>
+#include <timer_interface.hpp>
+#include <sleep_interface.hpp>
+#include <spi_bus.hpp>
 
 
 #define MS5611_RESET 0x1E
@@ -46,7 +49,7 @@ typedef enum MS5611_OSR {
 
 class MS5611Barometer {
     public:
-        MS5611Barometer(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin);
+        MS5611Barometer(SPIBusMaster& spi_bus, GPIOOutputInterface& cs_pin, SleepInterface& sleeper);
         void reset();
         void readProm();
         int32_t getTemperature();
@@ -55,11 +58,12 @@ class MS5611Barometer {
         void setOsr(MS5611_OSR osr);
         MS5611_PROM prom;
         uint8_t crc4(MS5611_PROM prom);
-
+        void init();
 
     private:
-        mbed::SPI& spi_bus;
-        mbed::DigitalOut& cs_pin;
+        SPIBusMaster& spi_bus;
+        GPIOOutputInterface& cs_pin;
+        SleepInterface& sleeper;
         void writeRegister8(uint8_t reg, uint8_t value);
         uint8_t readRegister8(uint8_t reg);
         void writeRegister16(uint8_t reg, uint16_t value);
@@ -71,6 +75,6 @@ class MS5611Barometer {
         uint8_t d2_register;
         void promToArray(MS5611_PROM prom, uint16_t arr[]); 
 
-        rtos::Kernel::Clock::duration_u32 reset_sleep;
-        rtos::Kernel::Clock::duration_u32 conversion_time;
+        uint32_t reset_sleep;
+        uint32_t conversion_time;
 };

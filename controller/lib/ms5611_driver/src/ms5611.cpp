@@ -1,11 +1,14 @@
-#include "ms5611.h"
+#include "ms5611.hpp"
 
-MS5611Barometer::MS5611Barometer(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin) : spi_bus(spi_bus), cs_pin(cs_pin) {
-    cs_pin=1;
+MS5611Barometer::MS5611Barometer(SPIBusMaster& spi_bus, GPIOOutputInterface& cs_pin, SleepInterface& sleeper) : spi_bus(spi_bus), cs_pin(cs_pin), sleeper(sleeper) {
+    // cs_pin.setHigh();
     // spi_bus.format(8, 3);
     // spi_bus.frequency(9000000);
     setOsr(MS5611_OSR_256);
-    reset_sleep = rtos::Kernel::Clock::duration_u32 {5};
+    reset_sleep = 5;
+}
+
+void MS5611Barometer::init() {
     reset();
     readProm();
 }
@@ -13,27 +16,27 @@ MS5611Barometer::MS5611Barometer(mbed::SPI& spi_bus, mbed::DigitalOut& cs_pin) :
 void MS5611Barometer::setOsr(MS5611_OSR osr) {
     switch (osr) {
         case MS5611_OSR_256:
-            conversion_time = rtos::Kernel::Clock::duration_u32 {1};
+            conversion_time = 1;
             d1_register = 0x40;
             d2_register = 0x50;
             break;
         case MS5611_OSR_512:
-            conversion_time = rtos::Kernel::Clock::duration_u32 {2};
+            conversion_time = 2;
             d1_register = 0x42;
             d2_register = 0x52;
             break;
         case MS5611_OSR_1024:
-            conversion_time = rtos::Kernel::Clock::duration_u32 {3};
+            conversion_time = 3;
             d1_register = 0x44;
             d2_register = 0x54;
             break;
         case MS5611_OSR_2048:
-            conversion_time = rtos::Kernel::Clock::duration_u32 {5};
+            conversion_time = 5;
             d1_register = 0x46;
             d2_register = 0x56;
             break;
         case MS5611_OSR_4096:
-            conversion_time = rtos::Kernel::Clock::duration_u32 {10};
+            conversion_time = 10;
             d1_register = 0x48;
             d2_register = 0x58;
             break;
@@ -43,10 +46,10 @@ void MS5611Barometer::setOsr(MS5611_OSR osr) {
 void MS5611Barometer::reset() {
     // readRegister8(MS5611_RESET);
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(MS5611_RESET);
-    rtos::ThisThread::sleep_for(reset_sleep);
-    cs_pin = 1;
+    sleeper.sleepMs(reset_sleep);
+    cs_pin.setHigh();
     spi_bus.unlock();
 
 }
@@ -69,20 +72,20 @@ void MS5611Barometer::readProm() {
 
 void MS5611Barometer::writeRegister8(uint8_t reg, uint8_t value) {
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
     spi_bus.write(value);
-    cs_pin = 1;
+    cs_pin.setHigh();
     spi_bus.unlock();
 }
 
 uint8_t MS5611Barometer::readRegister8(uint8_t reg) {
     spi_bus.lock();
     uint8_t result;
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
     result = spi_bus.write(0x00);
-    cs_pin = 1;
+    cs_pin.setHigh();
     spi_bus.unlock();
 
     return result;
@@ -91,11 +94,11 @@ uint8_t MS5611Barometer::readRegister8(uint8_t reg) {
 uint16_t MS5611Barometer::readRegister16(uint8_t reg) {
     uint16_t result;
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
     uint8_t msb = spi_bus.write(0x00);
     uint8_t lsb = spi_bus.write(0x00);
-    cs_pin = 1;
+    cs_pin.setHigh();
     spi_bus.unlock();
 
     result = (msb << 8) | lsb;
@@ -107,21 +110,21 @@ void MS5611Barometer::writeRegister16(uint8_t reg, uint16_t value) {
     uint8_t msb = value >> 8;
     uint8_t lsb = value & 0xFF;
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
     spi_bus.write(msb);
     spi_bus.write(lsb);
-    cs_pin = 1;
+    cs_pin.setHigh();
     spi_bus.unlock();
 }
 
 uint32_t MS5611Barometer::readRegister24(uint8_t reg) {
-    uint8_t buf[3] = {0};
+    uint8_t buf[6] = {0};
     spi_bus.lock();
-    cs_pin = 0;
+    cs_pin.setLow();
     spi_bus.write(reg);
-    spi_bus.write((const char *)&buf, 3, (char *)&buf, 3);
-    cs_pin = 1;
+    spi_bus.write(buf, 3, buf, 3);
+    cs_pin.setHigh();
     spi_bus.unlock();
 
     return (buf[0] << 16) | (buf[1] << 8) | (buf[2]);
@@ -129,13 +132,13 @@ uint32_t MS5611Barometer::readRegister24(uint8_t reg) {
 
 uint32_t MS5611Barometer::readUncorrectedPressure() {
     readRegister8(d1_register);
-    rtos::ThisThread::sleep_for(conversion_time);
+    sleeper.sleepMs(conversion_time);
     return readRegister24(MS5611_ADC_READ);
 }
 
 uint32_t MS5611Barometer::readUncorrectedTemp() {
     readRegister8(d2_register);
-    rtos::ThisThread::sleep_for(conversion_time);
+    sleeper.sleepMs(conversion_time);
     return readRegister24(MS5611_ADC_READ);
 }
 

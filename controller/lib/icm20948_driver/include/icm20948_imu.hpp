@@ -1,10 +1,11 @@
 #pragma once
 
 #include <cstdint>
-#include <spi_bus.h>
-#include <gpio_interface.h>
+#include <spi_bus.hpp>
+#include <gpio_output_interface.hpp>
 #include <math.h>
-#include <algorithm.h>
+
+#define 	MIN(a, b)   ((b)>(a)?(a):(b))
 
 // #define ICM20948_USE_DMP
 #define INV_MAX_SERIAL_WRITE 16

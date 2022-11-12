@@ -7,13 +7,9 @@ static void error_loop() {
     }
 }
 
-GPSManager::GPSManager(mbed::UnbufferedSerial& serial_connection, TinyGPSPlus& gps_parser) : serial_connection(serial_connection), gps_parser(gps_parser) {
-    serial_connection.baud(9600);
-    serial_connection.format(
-        /* bits */ 8,
-        /* parity */ mbed::SerialBase::None,
-        /* stop bit */ 1
-    );
+GPSManager::GPSManager(uart_inst_t& serial_connection, TinyGPSPlus& gps_parser) : serial_connection(serial_connection), gps_parser(gps_parser) {
+    uart_init(&serial_connection, 9600);
+    uart_set_format(&serial_connection, 8, 1, UART_PARITY_NONE);
 
     allocator = rcl_get_default_allocator();
     RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
@@ -34,9 +30,7 @@ void GPSManager::updateParser(char data) {
 }
 
 void GPSManager::readData() {
-    if (serial_connection.read(&c, 1)) {
-        updateParser(c);
-    }
+    updateParser(uart_getc(&serial_connection));
 }
 
 TinyGPSPlus& GPSManager::getGPS() {
@@ -49,10 +43,10 @@ void GPSManager::readLoop() {
     }
 }
 
-void GPSManager::testPrint(USBSerial& serial) {
+void GPSManager::testPrint() {
     if (getGPS().location.isUpdated()) {
-        serial.printf("Latitude: %lf\n", getGPS().location.lat());
-        serial.printf("Longitude: %lf\n", getGPS().location.lng());
+        printf("Latitude: %lf\n", getGPS().location.lat());
+        printf("Longitude: %lf\n", getGPS().location.lng());
     }
 }
 

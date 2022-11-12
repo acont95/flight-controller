@@ -1,5 +1,6 @@
-#include <mbed.h>
-#include <micro_ros_platformio.h>
+#pragma once
+
+// #include <micro_ros_platformio.h>
 #include <flight_controller_msgs/msg/telemetry.h>
 #include <flight_controller_msgs/msg/controller_command.h>
 #include <flight_controller_msgs/msg/gps_coordinates.h>
@@ -14,8 +15,6 @@
 
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){error_loop();}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
-
-mbed::DigitalOut led(LED1);
 
 class FlightControllerNode{
     public:
@@ -44,5 +43,4 @@ class FlightControllerNode{
         flight_controller_msgs__msg__GPSCoordinates gpsCoordinatesMsg;
         flight_controller_msgs__msg__AltitudeTempPressure altitudeMsg;
         flight_controller_msgs__msg__HeightAboveGround heightAboveGroundMsg;
-				
 };

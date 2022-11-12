@@ -1,9 +1,9 @@
 #pragma once
 
-#include <baro_manager.h>
-#include <gps_manager.h>
-#include <imu_manager.h>
-#include <hcsr04_us.h>
+#include <baro_manager.hpp>
+#include <gps_manager.hpp>
+#include <imu_manager.hpp>
+#include <hcsr04_us.hpp>
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 
@@ -44,7 +44,7 @@ class FlightController {
         void updateHeight(int32_t height_mm);
         void updateGPSAltitude(int32_t altitude_cm);
         void pidUpdate();
-        void testPrint(USBSerial& serial);
+        void testPrint();
 
 
     private:

@@ -1,9 +1,7 @@
-#include "icm20948_imu.h"
+#include "icm20948_imu.hpp"
 
 // Constructors
 ICM20948_IMU::ICM20948_IMU(SPIBusMaster& spi_bus, GPIOOutputInterface& cs_pin, xyz16Int accel_offset, xyz16Int gyro_offset) : spi_bus(spi_bus), cs_pin(cs_pin), accel_offset(accel_offset), gyro_offset(gyro_offset) {
-    cs_pin.setHigh();
-    // cs_pin=1;
     // spi_bus.format(8, 0);
     // spi_bus.frequency(2000000);
     // setAccelOffsets();
@@ -618,7 +616,7 @@ void ICM20948_IMU::loadDmpFirmware(uint8_t dmp3_image[], uint16_t dmp3_image_siz
 
     int write_size;
     while (size > 0) {
-        write_size = min(size, INV_MAX_SERIAL_WRITE);
+        write_size = MIN(size, INV_MAX_SERIAL_WRITE);
         if ((mem_addr & 0xff) + write_size > 0x100) {
             // Moved across a bank
             write_size = (mem_addr & 0xff) + write_size - 0x100;
@@ -638,7 +636,7 @@ void ICM20948_IMU::loadDmpFirmware(uint8_t dmp3_image[], uint16_t dmp3_image_siz
     // uint8_t data_cmp[INV_MAX_SERIAL_WRITE];
 
     while (size > 0) {
-        write_size = min(size, INV_MAX_SERIAL_WRITE);
+        write_size = MIN(size, INV_MAX_SERIAL_WRITE);
         if ((mem_addr & 0xff) + write_size > 0x100) {
             // Moved across a bank
             write_size = (mem_addr & 0xff) + write_size - 0x100;
