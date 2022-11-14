@@ -153,7 +153,6 @@ INT_STATUS_1 ICM20948_IMU::intStatus1() {
 INT_STATUS_2 ICM20948_IMU::intStatus2() {
     uint8_t val = readRegister8(0, ICM20948_INT_STATUS_2);
     INT_STATUS_2 result;
-    // result.FIFO_OVERFLOW_INT = (val == 0xF) ? 1 : 0;
     result.FIFO_OVERFLOW_INT = val & 1;
 
     return result;

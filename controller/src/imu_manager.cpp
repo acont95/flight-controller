@@ -16,9 +16,9 @@ void ImuManager::init() {
 
     imu.setOdrAlignEn(ODR_ALIGN_EN::ENABLE_ODR_START_TIME_ALIGNMENT);
     imu.setAccelConfig(ACCEL_DLPFCFG::ACCEL_DLPFCFG_6, ACCEL_FS_SEL::ACCEL_FULL_SCALE_2G, ACCEL_FCHOICE::ACCEL_ENABLE_DLPF);
-    imu.setAccelSmplrtDiv(2);
+    imu.setAccelSmplrtDiv(12);
     imu.setGyroConfig1(GYRO_DLPFCFG::GYRO_DLPF_6, GYRO_FS_SEL::GYRO_RANGE_1000, GYRO_FCHOICE::GYRO_ENABLE_DLPF);
-    imu.setGyroSmplrtDiv(2);
+    imu.setGyroSmplrtDiv(12);
     imu.setGyroOffsets();
 
     imu.setIntPinCfg(
@@ -182,9 +182,7 @@ float ImuManager::getInertialYawGyro(float yaw_rate) {
 
 float ImuManager::trapezoid(float current_val, float previous_val, uint64_t delta) {
     // return ((current_val + previous_val) / 2) * (delta / 1000000.0f);
-    // return ((current_val + previous_val) / 2) * 0.011555f;
-    return ((current_val + previous_val) / 2) * 0.00177777f;
-
+    return ((current_val + previous_val) / 2) * 0.011555f;
 }
 
 float ImuManager::complementaryFilter(float gyro_angle, float accel_angle) {
@@ -199,16 +197,10 @@ float ImuManager::getMagnetometerYaw(xyz16Int magnetometer_data) {
     return atan2f(-Bfy, Bfx);
 }
 
-void ImuManager::isr() {
-    // event_queue.call(this, &ImuManager::interruptHandler);
-}
-
 void ImuManager::interruptHandler() {
-    // TO DO PASS DT TO TASK
     switch (getInterruptType()) {
         case DATA_READY:    
             timer.stop();
-            // setDt(timer.elapsed_time().count());
             setDt(timer.elapsedUs());
             timer.start();
             while (!imu.dataRdyStatus().RAW_DATA_RDY) {};
@@ -228,16 +220,9 @@ uint64_t ImuManager::getDt() {
 }
 
 void ImuManager::testPrint() {
-    xyz16Int res = imu.gyroData();
-    printf("X: %i\n", (int) res.x);
-    printf("Y: %i\n", (int) res.y);
-    printf("Z: %i\n", (int) res.z); 
-    // printf("Pitch: %f\n", getInertialPitchAccel(res));
-    // printf("Roll: %f\n", getInertialRollAccel(res));
-
-    // printf("Roll: %f\n", (float) attitude.roll);
-    // printf("Pitch: %f\n", (float) attitude.pitch);
-    // printf("Yaw: %f\n", (float) attitude.yaw); 
+    printf("Roll: %f\n", (float) attitude.roll);
+    printf("Pitch: %f\n", (float) attitude.pitch);
+    printf("Yaw: %f\n", (float) attitude.yaw); 
 }
 
 const xyzSigned16Int ImuManager::hardIronOffset = {.x=0, .y=0, .z=0};

@@ -5,11 +5,12 @@
 #include <hardware/spi.h>
 #include <inttypes.h>
 #include <spi_bus.hpp>
-
+#include <FreeRTOS.h>
+#include <semphr.h>
 
 class PicoSPIBus: public SPIBusMaster {
     public:
-        PicoSPIBus(spi_inst_t* spi_instance, uint baud_rate);
+        PicoSPIBus(spi_inst_t* spi_instance, SemaphoreHandle_t* mutex, uint baud_rate);
         void lock();
         void unlock();
         uint8_t write(uint8_t data);
@@ -17,5 +18,6 @@ class PicoSPIBus: public SPIBusMaster {
         void init();
     private:
         spi_inst_t* spi_instance;
+        SemaphoreHandle_t* mutex;
         uint baud_rate;
 };

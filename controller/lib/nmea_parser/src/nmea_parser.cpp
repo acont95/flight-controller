@@ -24,19 +24,6 @@ void NMEAParser::parseMessage(char msg[], char* f[]) {
 
 void NMEAParser::encode(char c) {
     buf[bufIdx] = c;
-    
-    // switch (c)
-    // {
-    // case '\n':
-    //     printf("\\n \n");
-    //     break;
-    // case '\r':
-    //     printf("\\r \n");
-    //     break;
-    // default:
-    //     printf("%c\n", c);
-    //     break;
-    // }
 
     if ((c == '\n') && (buf[bufIdx - 1] == '\r')) {
         parseMessage(buf, fields);
@@ -50,7 +37,10 @@ void NMEAParser::encode(char c) {
             // handleGSAMsg();
         } else if (!strcmp(msg_type, "GGA")) {
             handleGGAMsg();
-            locUpdated = true;
+            setLocation();
+            if (ggaMessage.quality != '0') {
+                locUpdated = true;
+            }
         } else if (!strcmp(msg_type, "GLL")) {
             // handleGLLMsg();
         } else if (!strcmp(msg_type, "VTG")) {
@@ -85,18 +75,16 @@ void NMEAParser::handleGGAMsg() {
     strcpy(msg.diffStation, fields[14]);
     strcpy(msg.cs, fields[15]);
 
-    // printf("ggamsg lat: %s\n", msg.lat);
-    // printf("ggamsg lon: %s\n", msg.lon);
-    // printf("fields lat: %s\n", fields[2]);
-    // printf("fields lon: %s\n", fields[4]);
-
     ggaMessage = msg;
 }
 
 Location NMEAParser::getLocation() {
+    return location;
+}
+
+void NMEAParser::setLocation() {
     location.lat = str2lat(ggaMessage.lat, ggaMessage.NS);
     location.lon = str2lon(ggaMessage.lon, ggaMessage.EW);
-    return location;
 }
 
 double NMEAParser::str2lat(char* s, char ns) {

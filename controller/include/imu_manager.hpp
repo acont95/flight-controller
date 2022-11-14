@@ -61,7 +61,6 @@ class ImuManager {
         float trapezoid(float current_val, float previous_val, uint64_t delta);
         float complementaryFilter(float gyro_angle, float accel_angle);
         float getMagnetometerYaw(xyz16Int magnetometer_data);
-        void isr();
 
         static const float pi;
         static const float alpha;
@@ -73,10 +72,7 @@ class ImuManager {
         static const xyzSigned16Int hardIronOffset;
         static const xyzSigned16Int softIronOffset;
         SleepInterface& sleeper;
-        // mbed::InterruptIn& imu_int;
-        // events::EventQueue& event_queue;
         TimerInterface& timer;
-        // USBSerial& serial;
         uint32_t count = 0;
 
         // rclc_support_t support;

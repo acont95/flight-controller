@@ -1,3 +1,5 @@
+#pragma once
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,58 +8,58 @@
 
 /************** GSV Message Structs **************/
 struct GSVRepeatedBlock {
-    char* svid;
-    char* elv;
-    char* az;
-    char* cno;
+    char svid[16];
+    char elv[16];
+    char az[16];
+    char cno[16];
 };
 
 struct GSVMsg {
-    char* id;
+    char id[16];
     char numMsg;
     char msgNum;
-    char* numSV;
+    char numSV[16];
     GSVRepeatedBlock gsvRepeated[4];
-    char* signalId;
-    char* cs;
+    char signalId[16];
+    char cs[16];
 };
 
 /************** RMC Message Structs **************/
 
 
 struct RMCMsg {
-    char* id;
-    char* time;
+    char id[16];
+    char time[16];
     char status;
-    char* lat;
+    char lat[16];
     char NS;
-    char* lon;
+    char lon[16];
     char EW;
-    char* spd;
-    char* cog;
-    char* date;
-    char* mv;
+    char spd[16];
+    char cog[16];
+    char date[16];
+    char mv[16];
     char mvEW;
     char posMode;
     char nacStatus;
-    char* cs;
+    char cs[16];
 };
 
 /************** GSA Message Structs **************/
 struct GSARepeatedBlock {
-    char* svid;
+    char svid[16];
 };
 
 struct GSAMsg {
-    char* id;
+    char id[16];
     char opMode;
     char navMode;
     GSARepeatedBlock svidRepeated[12];
-    char* PDOP;
-    char* HDOP;
-    char* VDOP;
-    char* systemId;
-    char* cs;
+    char PDOP[16];
+    char HDOP[16];
+    char VDOP[16];
+    char systemId[16];
+    char cs[16];
 };
 
 /************** GGA Message Structs **************/
@@ -84,49 +86,47 @@ struct GGAMsg {
 /************** GLL Message Structs **************/
 
 struct GLLMsg {
-    char* id;
-    char* lat;
+    char id[16];
+    char lat[16];
     char NS;
-    char* lon;
+    char lon[16];
     char EW;
-    char* time;
+    char time[16];
     char status;
     char posMode;
-    char* cs;
+    char cs[16];
 };
 
 /************** VTG Message Structs **************/
 
 struct VTGMsg {
-    char* id;
-    char* cogt;
+    char id[16];
+    char cogt[16];
     char cogtUnit;
-    char* cogm;
+    char cogm[16];
     char cogmUnit;
-    char* sogn;
+    char sogn[16];
     char sognUnit;
-    char* sogk;
+    char sogk[16];
     char sogkUnit;
     char posMode;
-    char* cs;
+    char cs[16];
 };
 
 /************** TXT Message Structs **************/
 
 struct TXTMsg {
-    char* id;
-    char* numMsg;
-    char* msgNum;
-    char* msgType;
-    char* text;
-    char* cs;
+    char id[16];
+    char numMsg[16];
+    char msgNum[16];
+    char msgType[16];
+    char text[16];
+    char cs[16];
 };
 
 struct Location {
     double lat;
     double lon;
-    int64_t degrees;
-    int64_t billionths;
 };
 
 class NMEAParser {
@@ -136,7 +136,7 @@ class NMEAParser {
         Location getLocation();
         bool locationUpdated();
     private:
-        char buf[255];
+        char buf[128];
         int bufIdx = 0;
         char* fields[20];
         void parseMessage(char msg[], char** fields);
@@ -158,6 +158,7 @@ class NMEAParser {
         TXTMsg txtMessage;
 
         Location location;
+        void setLocation();
         bool locUpdated = false;
 
         double str2lat(char* s, char ns);

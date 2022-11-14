@@ -17,11 +17,11 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/lib/icm20948_driver)
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/nmea_parser)
 
 
-# add_library(microros STATIC IMPORTED)
-# set_property(
-#     TARGET microros PROPERTY
-#     IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/micro_ros_raspberrypi_pico_sdk/libmicroros/libmicroros.a"
-# )
+add_library(microros STATIC IMPORTED)
+set_property(
+    TARGET microros PROPERTY
+    IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/micro_ros_raspberrypi_pico_sdk/libmicroros/libmicroros.a"
+)
 
 add_executable(main_exec
     ${CMAKE_SOURCE_DIR}/src/main.cpp
@@ -35,10 +35,8 @@ target_include_directories(
             ${CMAKE_SOURCE_DIR}/lib/ms5611_driver/include
             ${CMAKE_SOURCE_DIR}/lib/icm20948_driver/include
             ${CMAKE_SOURCE_DIR}/lib/nmea_parser/include
-
-
-            # ${CMAKE_SOURCE_DIR}/micro_ros_raspberrypi_pico_sdk/libmicroros/include
-            # ${CMAKE_SOURCE_DIR}/micro_ros_raspberrypi_pico_sdk
+            ${CMAKE_SOURCE_DIR}/micro_ros_raspberrypi_pico_sdk/libmicroros/include
+            ${CMAKE_SOURCE_DIR}/micro_ros_raspberrypi_pico_sdk
 )
 
 target_link_libraries(main_exec 
@@ -46,7 +44,7 @@ target_link_libraries(main_exec
     hardware_spi
     FreeRTOS-Kernel 
     FreeRTOS-Kernel-Heap1
-    # microros
+    microros
     hcsr04_driver
     ms5611_driver
     icm20948_driver
@@ -61,7 +59,7 @@ target_sources(
             # ${PROJECT_SOURCE_DIR}/src/baro_manager.cpp 
             # ${PROJECT_SOURCE_DIR}/src/flight_controller.cpp 
             # ${PROJECT_SOURCE_DIR}/src/flight_controller_node.cpp 
-            # ${PROJECT_SOURCE_DIR}/src/gps_manager.cpp 
+            ${PROJECT_SOURCE_DIR}/src/gps_manager.cpp 
             ${PROJECT_SOURCE_DIR}/src/imu_manager.cpp  
             # ${PROJECT_SOURCE_DIR}/src/test_printer.cpp 
             # ${PROJECT_SOURCE_DIR}/src/main.c 
@@ -70,7 +68,7 @@ target_sources(
             ${CMAKE_SOURCE_DIR}/src/pico_sleep_impl.cpp 
             ${CMAKE_SOURCE_DIR}/src/pico_timer_impl.cpp 
             ${CMAKE_SOURCE_DIR}/src/pico_spi_bus_impl.cpp 
-            # ${CMAKE_SOURCE_DIR}/micro_ros_raspberrypi_pico_sdk/pico_uart_transport.c
+            ${CMAKE_SOURCE_DIR}/micro_ros_raspberrypi_pico_sdk/pico_uart_transport.c
             ${CMAKE_SOURCE_DIR}/src/baro_manager.cpp 
             ${CMAKE_SOURCE_DIR}/src/ultrasonic_distance_manager.cpp 
             # ${CMAKE_SOURCE_DIR}/src/ultrasonic_test.cpp
