@@ -5,9 +5,18 @@
 #include <hardware/uart.h>
 #include <inttypes.h>
 
+#include <rcl/rcl.h>
+#include <rcl/error_handling.h>
+#include <rclc/rclc.h>
+#include <rmw_microros/rmw_microros.h>
+#include <pico_uart_transports.h>
+
+
 #include <FreeRTOS.h>
 #include <semphr.h>
 #include <queue.h>
+#include <freertos_sleep_impl.hpp>
+
 #include <icm20948_imu.hpp>
 // #include <flight_controller.h>
 #include <imu_manager.hpp>
@@ -16,18 +25,29 @@
 #include <hcsr04_us.hpp>
 #include <ultrasonic_distance_manager.hpp>
 // #include <test_printer.h>
-// #include <flight_controller_node.h>
+#include <flight_controller_node.hpp>
 #include <pico_gpio_output_impl.hpp>
 #include <pico_timer_impl.hpp>
 #include <pico_sleep_impl.hpp>
 #include <pico_spi_bus_impl.hpp>
 #include <nmea_parser.hpp>
+#include <error_loop.h>
+
+const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+
+void error_loop() {
+    while(1){
+        gpio_put(LED_PIN, !gpio_get(LED_PIN));
+        sleep_ms(100);
+    }
+}
 
 /************** FREERTOS DECLARATIONS **************/
 
 static const int msg_queue_len = 128;  // Size of msg_queue
 static QueueHandle_t msg_queue;
 static SemaphoreHandle_t spi_mutex;
+static FreeRTOSSleepImpl rtosSleeper;
 
 static PicoSleepImpl sleeper;
 static PicoTimer timer;
@@ -42,10 +62,17 @@ static PicoSPIBus SPI_BUS_0(spi0, &spi_mutex, 2000000);
 static const uint IMU_SPI_CS = 6;
 static PicoGPIOOutputImpl imu_cs(IMU_SPI_CS);
 static const uint IMU_INT_PIN = 14;
-static const xyz16Int accelOffset = {.x=0, .y=0, .z=0};
-static const xyz16Int gyroOffset = {.x=88, .y=-20, .z=10};
-static ICM20948_IMU imu(SPI_BUS_0, imu_cs, accelOffset, gyroOffset);
-static ImuManager imu_manager(imu, sleeper, timer);
+static const XYZ16Int accelOffset = {.x=0, .y=0, .z=0};
+static const XYZ16Int gyroOffset = {.x=88, .y=-19, .z=9};
+static const XYZ16Int hardIronOffset = {.x=-141, .y=75, .z=-82};
+static const SoftIronOffset softIronOffset = {
+    {.x=1.4475028682818498,.y=-0.0028425603218517267,.z=0.04243430365775245},
+    {.x=-0.0028425603218516487,.y=1.447234258663461,.z=0.06844794461759508},
+    {.x=0.04243430365775225,.y=0.06844794461759497,.z=0.9914372150252756}
+};
+
+static ICM20948_IMU imu(SPI_BUS_0, imu_cs, sleeper, accelOffset, gyroOffset);
+static ImuManager imu_manager(imu, sleeper, timer, hardIronOffset, softIronOffset, 12);
 
 /************** GPS SENSOR DEFINE **************/
 static const uint GPS_SERIAL_TX = 16;
@@ -56,14 +83,14 @@ static GPSManager gps_manager;
 // Task: Serial UART task
 void gps_feed_task(void* parameters) {
     uint8_t recv;
-    printf("GPS TASK\n");
     while (true) {
         char c = uart_getc(uart0);
         gps.encode(c);
+        // Push location data when valid 
         if (gps.locationUpdated()) {
             Location loc = gps.getLocation();
             gps_manager.setLocation(loc);
-            gps_manager.testPrint();
+            // gps_manager.publishGPSCoordinates();
         }
     }
 }
@@ -87,6 +114,7 @@ static UltrasonicDistanceManager distance_manager(ultrasonic_sensor);
 // Task: IMU interrupt
 void imuInterrupt_task(void* parameters) {
     uint8_t recv;
+    imu_manager.enableInterrupts();
     while (true) {
         if (xQueueReceive(msg_queue, &recv, portMAX_DELAY)) {
             imu_manager.interruptHandler();
@@ -97,8 +125,6 @@ void imuInterrupt_task(void* parameters) {
 void imu_irq(void) {
     uint32_t event_mask = gpio_get_irq_event_mask(IMU_INT_PIN);
     if (event_mask == GPIO_IRQ_EDGE_RISE) {
-        // printf("IRQ\n");
-
         gpio_acknowledge_irq(IMU_INT_PIN, event_mask);
         BaseType_t xHigherPriorityTaskWoken;
         xHigherPriorityTaskWoken = pdFALSE;
@@ -108,6 +134,9 @@ void imu_irq(void) {
         gpio_acknowledge_irq(IMU_INT_PIN, event_mask);
     }
 }
+
+// Flight Controller ROS Node
+// static FlightControllerNode fcNode;
 
 
 int count = 0;
@@ -128,6 +157,14 @@ void ultrasonic_irq(void) {
     }
 }
 
+void periodic_publish_task(void* parameters) {
+    while(true) {
+        rtosSleeper.sleepMs(20);
+        imu_manager.testPrint();
+        // baro_manager.publishAltTempPressure();
+    }
+}
+
 // static TestPrinter test_printer(serial, baro_manager, gps_manager, ultrasonic_sensor, imu_manager);
 
 /************** MOTOR DEFINE **************/
@@ -137,49 +174,39 @@ void ultrasonic_irq(void) {
 // const mbed::PwmOut motor3(p17);
 // const mbed::PwmOut motor4(p18);
 
-// mbed::DigitalOut led(LED1);
 const std::chrono::milliseconds pidUpdatePeriod(50);
 
 // FlightController fc(imu_manager, baro_manager, gps_manager, ultrasonic_sensor, gps_manager.getLocation());
 
 
-// static void imuSensorCallback(const void* msgin) {
-//     const flight_controller_msgs__msg__IMUAttitude* msg = (const flight_controller_msgs__msg__IMUAttitude*) msgin;
-//     Attitude a = {
-//         .yaw = msg->yaw,
-//         .pitch = msg->pitch,
-//         .roll = msg->roll
-//     };
-//     fc.updateImuAttitude(a);
-// }
-
-// static void gpsSensorCallback(const void* msgin) {
-//     const flight_controller_msgs__msg__GPSCoordinates* msg = (const flight_controller_msgs__msg__GPSCoordinates*) msgin;
-//     GCSCoordinates c = {
-//         .latitude = msg->latitude,
-//         .longitude = msg->longitude
-//     };
-//     fc.updateGPSData(c);
-// }
-
-// static void barometerSensorCallback(const void* msgin) {
-//     const flight_controller_msgs__msg__AltitudeTempPressure* msg = (const flight_controller_msgs__msg__AltitudeTempPressure*) msgin;
-//     TempPressureAltitude tpa = {
-//         .temp = msg->temperature,
-//         .pressure = msg->pressure,
-//         .altitude = msg->altitude
-//     };
-//     fc.updateBaroData(tpa);
-// }
-
-// static void heightSensorCallback(const void* msgin) {
-//     const flight_controller_msgs__msg__HeightAboveGround* msg = (const flight_controller_msgs__msg__HeightAboveGround*) msgin;
-//     fc.updateHeight(msg->height);
-// }
 
 int main() {
     msg_queue = xQueueCreate(msg_queue_len, 1);
     spi_mutex = xSemaphoreCreateMutex();
+
+    // rmw_uros_set_custom_transport(
+	// 	true,
+	// 	NULL,
+	// 	pico_serial_transport_open,
+	// 	pico_serial_transport_close,
+	// 	pico_serial_transport_write,
+	// 	pico_serial_transport_read
+	// );
+
+    // // Wait for agent successful ping for 2 minutes.
+    // const int timeout_ms = 1000; 
+    // const uint8_t attempts = 120;
+
+    // rcl_ret_t ret = rmw_uros_ping_agent(timeout_ms, attempts);
+
+    // if (ret != RCL_RET_OK)
+    // {
+    //     // Unreachable agent, exiting program.
+    //     return ret;
+    // }
+
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, true);
 
     stdio_init_all();
     sleep_ms(5000);
@@ -189,14 +216,14 @@ int main() {
     gpio_set_function(GPS_SERIAL_TX, GPIO_FUNC_UART);
     gpio_set_function(GPS_SERIAL_RX, GPIO_FUNC_UART);
 
-    BaseType_t gps_task = xTaskCreate(
-        gps_feed_task,
-        "GPS_FEED_TASK",
-        1024,
-        ( void * ) 1,
-        1,
-        NULL
-    );
+    // BaseType_t gps_task = xTaskCreate(
+    //     gps_feed_task,
+    //     "GPS_FEED_TASK",
+    //     1024,
+    //     ( void * ) 1,
+    //     1,
+    //     NULL
+    // );
 
     // IMU INIT
     imu_cs.init();
@@ -234,8 +261,19 @@ int main() {
     gpio_set_function(SPI_TX, GPIO_FUNC_SPI);
     gpio_set_function(SPI_RX, GPIO_FUNC_SPI);
 
-    baro.init();
+    // fcNode.init();
+    // baro.init();
     imu_manager.init();
+    // gps_manager.init(fcNode.getRosNode());s
+
+    // BaseType_t periodic_pub_task = xTaskCreate(
+    //     periodic_publish_task,
+    //     "PERIODIC_PUBLISH_TASK",
+    //     1024,
+    //     ( void * ) 1,
+    //     1,
+    //     NULL
+    // );
 
     vTaskStartScheduler();
 

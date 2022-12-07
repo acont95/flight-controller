@@ -3,9 +3,10 @@
 #include <cstdint>
 #include <spi_bus.hpp>
 #include <gpio_output_interface.hpp>
+#include <sleep_interface.hpp>
 #include <math.h>
 
-#define 	MIN(a, b)   ((b)>(a)?(a):(b))
+#define 	MIN(a, b)   ((b)>(a)?(a):(b))   
 
 // #define ICM20948_USE_DMP
 #define INV_MAX_SERIAL_WRITE 16
@@ -151,6 +152,9 @@
 #define ICM20948_I2C_SLV4_DO 0x16
 #define ICM20948_I2C_SLV4_DI 0x17
 
+// AK09916 REGISTER MAP
+#define AK09916_DEVICE_ID 0x09
+#define AK09916_SLAVE_ADDRESS 0x0C
 #define AK09916_WIA2 0x01
 #define AK09916_ST1 0x10
 #define AK09916_HXL 0x11
@@ -652,22 +656,122 @@ enum class REG_LP_DMP_EN {
 };
 
 enum class AK09916_MODE {
-    POWER_DOWN_MODE,
-    SINGLE_MEASUREMENT_MODE,
-    CONTINUOUS_MEASUREMENT_MODE1,
-    CONTINUOUS_MEASUREMENT_MODE2,
-    CONTINUOUS_MEASUREMENT_MODE3,
-    CONTINUOUS_MEASUREMENT_MODE4,
-    SELF_TEST_MODE
+    POWER_DOWN_MODE = 0x0,
+    SINGLE_MEASUREMENT_MODE = 0x1,
+    CONTINUOUS_MEASUREMENT_MODE1 = 0x2,
+    CONTINUOUS_MEASUREMENT_MODE2 = 0x4,
+    CONTINUOUS_MEASUREMENT_MODE3 = 0x6,
+    CONTINUOUS_MEASUREMENT_MODE4 = 0x8,
+    SELF_TEST_MODE = 0x10
 };
 
 enum class AK09916_SRST {
     NORMAL,
     RESET
 };
+
+/************** I2C_MST_CTRL **************/
+
+enum class MULT_MST_EN {
+    DISABLED,
+    ENABLED
+};
+
+enum class I2C_MST_P_NSR {
+    RESTART,
+    STOP
+};
+
+enum class I2C_MST_CLK {
+    CLK_0, //370.29 KHZ 50.00% Duty Cycle
+    CLK_1, //- KHZ - Duty Cycle
+    CLK_2, //370.29 KHZ 50.00% Duty Cycle
+    CLK_3, //432.00 KHZ 50.00% Duty Cycle
+    CLK_4, //370.29 KHZ 42.86% Duty Cycle
+    CLK_5, //370.29 KHZ 50.00% Duty Cycle
+    CLK_6, //345.60 KHZ 40.00% Duty Cycle 
+    CLK_7, //345.60 KHZ 46.67% Duty Cycle 
+    CLK_8, //304.94 KHZ 47.06% Duty Cycle 
+    CLK_9, //432.00 KHZ 50.00% Duty Cycle 
+    CLK_10, //432.00 KHZ 41.67% Duty Cycle 
+    CLK_11, //432.00 KHZ 41.67% Duty Cycle 
+    CLK_12, //471.27 KHZ 45.45% Duty Cycle 
+    CLK_13, //432.00 KHZ 50.00% Duty Cycle
+    CLK_14, //345.60 KHZ 46.67% Duty Cycle
+    CLK_15 //345.60 KHZ 46.67% Duty Cycle
+};
+
+
+/************** I2C_MST_DELAY_CTRL ENUMS **************/
+
+enum class DELAY_ES_SHADOW {
+    DISABLED,
+    ENABLED
+};
+
+enum class I2C_SLV4_DELAY_EN {
+    DISABLED,
+    ENABLED
+};
+
+enum class I2C_SLV3_DELAY_EN {
+    DISABLED,
+    ENABLED
+};
+
+enum class I2C_SLV2_DELAY_EN {
+    DISABLED,
+    ENABLED
+};
+
+enum class I2C_SLV1_DELAY_EN {
+    DISABLED,
+    ENABLED
+};
+
+enum class I2C_SLV0_DELAY_EN {
+    DISABLED,
+    ENABLED
+};
+
+/************** I2C_SLV0_REG ENUMS **************/
+
+enum class I2C_SLV0_RNW {
+    WRITE,
+    READ
+};
+
+/************** I2C_SLV0_CTRL ENUMS **************/
+
+enum class I2C_SLV0_EN {
+    DISABLED,
+    ENABLED
+};
+
+enum class I2C_SLV0_BYTE_SW {
+    NO_SWAPPING,
+    SWAP_BYTES
+};
+
+enum class I2C_SLV0_REG_DIS {
+    DISABLED,
+    READ_WRITE_ONLY
+};
+
+enum class I2C_SLV0_GRP {
+    ODD_NUMBERING,
+    EVEN_NUMBERING
+};
+
 // Structs
 
-struct I2C_MST_STATUS {
+struct XYZ16Int {
+    int16_t x;
+    int16_t y;
+    int16_t z;
+};
+
+struct I2CMastStatus {
     uint8_t PASS_THROUGH;
     uint8_t I2C_SLV4_DONE;
     uint8_t I2C_LOST_ARB;
@@ -678,60 +782,74 @@ struct I2C_MST_STATUS {
     uint8_t I2C_SLV0_NACK;
 };
 
-struct INT_STATUS {
+struct IntStatus {
     uint8_t WOM_INT;
     uint8_t PLL_RDY_INT;
     uint8_t DMP_INT1;
     uint8_t I2C_MST_INT;
 };
 
-struct INT_STATUS_1 {
+struct IntStatus1 {
     uint8_t RAW_DATA_0_RDY_INT;
 };
 
-struct INT_STATUS_2 {
+struct IntStatus2 {
     uint8_t FIFO_OVERFLOW_INT;
 };
 
-struct INT_STATUS_3 {
+struct IntStatus3 {
     uint8_t FIFO_WM_INT;
 };
 
-struct DATA_RDY_STATUS {
+struct DataRdyStatus {
     uint8_t WOF_STATUS;
     uint8_t RAW_DATA_RDY;
 };
 
-struct AK09916_STATUS1 {
+struct AK09916Status1 {
     uint8_t DRDY;
     uint8_t DOR;
 };
 
-struct AK09916_STATUS2 {
+struct AK09916Status2 {
     uint8_t HOFL;
 };
 
-struct xyz16Int {
-    int16_t x;
-    int16_t y;
-    int16_t z;
+struct AK09916Data {
+    XYZ16Int mag;
+    bool dataReady;
+    bool overrun;
+    bool overflow;
 };
 
-struct accelGyroData {
-    xyz16Int accel;
-    xyz16Int gyro;
+struct AccelGyroData {
+    XYZ16Int accel;
+    XYZ16Int gyro;
 };
 
-struct gyroConfig1{
+struct AccelGyroMagData {
+    XYZ16Int accel;
+    XYZ16Int gyro;
+    AK09916Data mag_data;
+};
+
+struct GyroConfig1{
     GYRO_DLPFCFG gyro_dlpfcfg;
     GYRO_FS_SEL gyro_fs_sel;
     GYRO_FCHOICE gyro_fchoice;
 };
 
+struct AccelConfig {
+    ACCEL_DLPFCFG accel_dlpfcfg;
+    ACCEL_FS_SEL accel_fs_sel;
+    ACCEL_FCHOICE accel_fchoice;
+};
+
 class ICM20948_IMU {
     public:
-        ICM20948_IMU(SPIBusMaster& spi_bus, GPIOOutputInterface& cs_pin, xyz16Int accel_offset, xyz16Int gyro_offset);
+        ICM20948_IMU(SPIBusMaster& spi_bus, GPIOOutputInterface& cs_pin, SleepInterface& sleeper, XYZ16Int accel_offset, XYZ16Int gyro_offset);
 
+        /************** USER_BANK_0_FUNCTIONS **************/
         void setUserCtrl(
             DMP_EN dmp_en, 
             FIFO_EN fifo_en,
@@ -753,7 +871,6 @@ class ICM20948_IMU {
             FSYNC_INT_MODE_EN fsync_int_mode_en,
             BYPASS_EN bypass_en
         );
-
         void setIntEnable(
             REG_WOF_EN reg_wof_en, 
             WOM_INT_EN wom_int_en, 
@@ -761,22 +878,18 @@ class ICM20948_IMU {
             DMP_INT1_EN dmp_int1_en, 
             I2C_MST_INT_EN i2c_mst_int_en
         );
-
         void setIntEnable1(RAW_DATA_0_RDY_EN raw_data_0_rdy_en);
         void setIntEnable2(FIFO_OVERFLOW_EN fifo_overflow_en);
         void setIntEnable3(FIFO_WM_EN fifo_wm_en);
-
-        I2C_MST_STATUS i2cMstStatus();
-        INT_STATUS intStatus();
-        INT_STATUS_1 intStatus1();
-        INT_STATUS_2 intStatus2();
-        INT_STATUS_3 intStatus3();
-        float delayTime();
-        float tempOut();
-        xyz16Int accelData();
-        xyz16Int gyroData();
-        accelGyroData readFifo();
-
+        I2CMastStatus getI2cMstStatus();
+        IntStatus getIntStatus();
+        IntStatus1 getIntStatus1();
+        IntStatus2 getIntStatus2();
+        IntStatus3 getIntStatus3();
+        float getDelayTime();
+        XYZ16Int getAccelData();
+        XYZ16Int getGyroData();
+        float getTempOut();
         void setFifoEn1(
             SLV_3_FIFO_EN slv_3_fifo_en, 
             SLV_2_FIFO_EN slv_2_fifo_en, 
@@ -790,43 +903,78 @@ class ICM20948_IMU {
             GYRO_X_FIFO_EN gyro_x_fifo_en,
             TEMP_FIFO_EN temp_fifo_en
         );
-        void fifoRst();
+        void setFifoRst();
         void setFifoMode(FIFO_MODE fifo_mode);
         uint16_t getFifoCount();
-        DATA_RDY_STATUS dataRdyStatus();
-        xyz16Int accelOffsetOut();
-        float timeBaseCorrectionPll();
+        DataRdyStatus getDataRdyStatus();  
+
+        /************** USER_BANK_1_FUNCTIONS **************/
+        void setAccelOffsets();
+        XYZ16Int getAccelOffsets();
+        float getTimeBaseCorrectionPll();
+
+        /************** USER_BANK_2_FUNCTIONS **************/
         void setGyroSmplrtDiv(uint8_t smplrt);
         void setGyroConfig1(GYRO_DLPFCFG gyroDlpf, GYRO_FS_SEL gyroRange, GYRO_FCHOICE gyro_fchoice);
-        gyroConfig1 getGyroConfig1();
+        GyroConfig1 getGyroConfig1();
         void setGyroConfig2(XGYRO_CTEN x_gyro_cten, YGYRO_CTEN y_gyro_cten, ZGYRO_CTEN z_gyro_cten, GYRO_AVGCFG gyro_avgcf);
+        void setGyroOffsets();
         void setOdrAlignEn(ODR_ALIGN_EN odr_align_en);
         void setAccelSmplrtDiv(uint16_t smplrt); 
         void setAccelIntelCtrl(ACCEL_INTEL_EN accel_intel_en, ACCEL_INTEL_MODE_INT accel_intel_mode_int);
         void setAccelWomThr(uint8_t wom_thr);
         void setAccelConfig(ACCEL_DLPFCFG accel_dlpfcfg, ACCEL_FS_SEL accel_fs_sel, ACCEL_FCHOICE accel_fchoice);
-        void accelConfig2(AX_ST_EN_REG ax_st_en_reg, AY_ST_EN_REG ay_st_en_reg, AZ_ST_EN_REG az_st_en_reg, DEC3_CFG dec3_cfg);
-        void fsyncConfig(DELAY_TIME_EN delay_time_en, WOF_DEGLITCH_EN wof_deglitch_en, WOF_EDGE_INT wof_edge_int, EXT_SYNC_SET ext_sync_set);
-        void tempConfig(TEMP_DLPFCFG temp_dlpfcfg);
-        void modCtrlUsr(REG_LP_DMP_EN reg_lp_dmp_en);
-        AK09916_STATUS1 ak09916Status1();
-        xyz16Int ak09916MeasurementData();
-        AK09916_STATUS2 ak09916Status2();
-        void ak09916Control2(AK09916_MODE mode);
-        void ak09916Control3(AK09916_SRST srst);
+        AccelConfig getAccelConfig();
+        void setAccelConfig2(AX_ST_EN_REG ax_st_en_reg, AY_ST_EN_REG ay_st_en_reg, AZ_ST_EN_REG az_st_en_reg, DEC3_CFG dec3_cfg);
+        void setFsyncConfig(DELAY_TIME_EN delay_time_en, WOF_DEGLITCH_EN wof_deglitch_en, WOF_EDGE_INT wof_edge_int, EXT_SYNC_SET ext_sync_set);
+        void setTempConfig(TEMP_DLPFCFG temp_dlpfcfg);
+        void setModCtrlUsr(REG_LP_DMP_EN reg_lp_dmp_en);
+
+        /************** USER_BANK_3_FUNCTIONS **************/
+        void setI2cMstOdrConfig(uint8_t smplrt);
+        void setI2cMstCtrl(MULT_MST_EN mult_mst_en, I2C_MST_P_NSR i2c_mst_p_nsr, I2C_MST_CLK i2c_mst_clk);
+        void setI2cMstDelayCtrl(DELAY_ES_SHADOW delay_es_shadow, I2C_SLV4_DELAY_EN i2c_slv4_delay_en, I2C_SLV3_DELAY_EN i2c_slv3_delay_en,
+            I2C_SLV2_DELAY_EN i2c_slv2_delay_en, I2C_SLV1_DELAY_EN i2c_slv1_delay_en, I2C_SLV0_DELAY_EN i2c_slv0_delay_en);
+        void setI2cSlv0Addr(I2C_SLV0_RNW i2c_slv0_rnw, uint8_t i2c_id_0);
+        void setI2cSlv0Reg(uint8_t reg);
+        void setI2cSlv0Ctrl(I2C_SLV0_EN i2c_slv0_en, I2C_SLV0_BYTE_SW i2c_slv0_byte_sw, I2C_SLV0_REG_DIS i2c_slv0_reg_dis, I2C_SLV0_GRP i2c_slv0_grp, uint8_t i2c_slvo_leng);
+        void setI2cSlv0Do(uint8_t data);
+
+        /************** MAGNETOMETER_FUNCTIONS **************/
+        AK09916Status1 getAk09916Status1();
+        void setupAk09916MeasurementData();
+        AK09916Status2 getAk09916Status2();
+        void setAk09916Control2(AK09916_MODE mode);
+        void setAk09916Control3(AK09916_SRST srst);
+        uint8_t getAk09916WhoAmI();
+        void ak09916Init();
+        uint8_t readSingleAK09916Reg(uint8_t reg);
+        void readAk09916Reg(uint8_t reg, uint8_t len);
+        AK09916Data readAk09916ExtData();
+        void writeSingleAK09916Reg(uint8_t reg, uint8_t val);
+
+        /************** DMP_FUNCTIONS **************/
         void loadDmpFirmware(uint8_t dmp3_image[], uint16_t dmp3_image_size, uint8_t load_addr);
         void setDmpStartAddress();
-        void setAccelOffsets();
-        void setGyroOffsets();
+
+        /************** HELPER_FUNCTIONS **************/
         float getGyroScaleFactor(GYRO_FS_SEL gyro_full_scale);
+        float getAccelScaleFactor(ACCEL_FS_SEL accel_full_scale);
+        AccelGyroData readFifo();
+        AccelGyroMagData readFifoAllSensors();
+        void resetI2cMaster();
+        void enableI2cMaster();
+        uint8_t buf[32] = {0};
+
     private:
         SPIBusMaster& spi_bus;
         GPIOOutputInterface& cs_pin;
-        uint8_t buf[12] = {0};
+        SleepInterface& sleeper;
+        // uint8_t buf[32] = {0};
         static const float TEMP_SENSITIVITY;
         static const float TEMP_OFFSET;
-        const xyz16Int accel_offset;
-        const xyz16Int gyro_offset;
+        const XYZ16Int accel_offset;
+        const XYZ16Int gyro_offset;
 
         uint8_t currentBank = 0;
         uint8_t currentDmpBank = 0;
@@ -835,7 +983,6 @@ class ICM20948_IMU {
         void writeRegister16(uint8_t bank, uint8_t reg, uint16_t value);
         int16_t readRegister16(uint8_t bank, uint8_t reg);
         void readRegister48(uint8_t bank, uint8_t reg);
-        void readRegister96(uint8_t bank, uint8_t reg);
         void writeRegister(uint8_t bank, uint8_t reg, uint8_t data[], uint8_t size);
         void readRegister(uint8_t bank, uint8_t reg, uint8_t data[], uint8_t size);
         void switchBank(uint8_t bank);
